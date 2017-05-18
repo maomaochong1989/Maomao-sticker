@@ -19,6 +19,16 @@ public abstract class Sticker {
   protected boolean isFlippedVertically;
   private float[] matrixValues = new float[9];
 
+  private boolean relatedPtohoview = true;
+
+  public boolean isRelatedPtohoview() {
+    return relatedPtohoview;
+  }
+
+  public void setRelatedPtohoview(boolean relatedPtohoview) {
+    this.relatedPtohoview = relatedPtohoview;
+  }
+
   public boolean isFlippedHorizontally() {
     return isFlippedHorizontally;
   }

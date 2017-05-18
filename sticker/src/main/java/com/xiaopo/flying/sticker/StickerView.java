@@ -35,6 +35,7 @@ public class StickerView extends FrameLayout {
     private final boolean bringToFrontCurrentSticker;
 
 
+
     private enum ActionMode {
         NONE,   //nothing
         DRAG,   //drag the sticker with your finger
@@ -130,6 +131,9 @@ public class StickerView extends FrameLayout {
 
         configDefaultIcons();
     }
+
+
+
 
     public void configDefaultIcons() {
         BitmapStickerIcon deleteIcon = new BitmapStickerIcon(
@@ -801,6 +805,9 @@ public class StickerView extends FrameLayout {
         if (stickers.size() > 0) {
             for (int i = 0 ; i<stickers.size();i++){
                 Sticker sticker = stickers.get(i);
+                if (!sticker.isRelatedPtohoview()){
+                    continue;
+                }
                 float[] points=getStickerPoints(sticker);
                 Matrix matrix = sticker.getMatrix();
                 matrix.postScale(scaleFactor, scaleFactor,focusX,focusY);
@@ -815,6 +822,9 @@ public class StickerView extends FrameLayout {
         if (stickers.size() > 0) {
             for (int i = 0 ; i<stickers.size();i++){
                 Sticker sticker = stickers.get(i);
+                if (!sticker.isRelatedPtohoview()){
+                    continue;
+                }
                 float[] points=getStickerPoints(sticker);
                 Matrix matrix = sticker.getMatrix();
                 matrix.postScale(scaleFactor, scaleFactor);
@@ -828,6 +838,9 @@ public class StickerView extends FrameLayout {
         if (stickers.size() > 0) {
             for (int i = 0 ; i<stickers.size();i++){
                 Sticker sticker = stickers.get(i);
+                if (!sticker.isRelatedPtohoview()){
+                    continue;
+                }
                 Matrix matrix = sticker.getMatrix();
                 matrix.postTranslate(velocityX,velocityY);
             }
@@ -840,6 +853,9 @@ public class StickerView extends FrameLayout {
             for (int i = 0 ; i<stickers.size();i++){
                 Sticker sticker = stickers.get(i);
                 Matrix matrix = sticker.getMatrix();
+                if (!sticker.isRelatedPtohoview()){
+                    continue;
+                }
                 matrix.setScale(scaleX,  scaleY,  focalX,  focalY);
             }
         }
