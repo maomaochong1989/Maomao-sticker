@@ -164,22 +164,6 @@ public abstract class Sticker {
         .contains(unrotatedPoint[0], unrotatedPoint[1]);
   }
 
-  private float proportionX=0;
-
-  private float proportionY=0;
-
-  public void setProportionXY(float x,float y){
-      this.proportionX=x;
-      this.proportionY=y;
-  }
-
-  public float getProportionX(){
-    return proportionX;
-  }
-
-  public float getProportionY(){
-    return proportionY;
-  }
 
 
   public void release() {

@@ -32,7 +32,7 @@ import java.util.Arrays;
  * Created by Administrator on 2017/4/18.
  */
 
-public class Main extends Activity implements PhotoCropView.onLocationListener, OnScaleChangedListener {
+public class Main extends Activity {
 
     private static final String TAG = "maomao";
 
@@ -83,95 +83,7 @@ public class Main extends Activity implements PhotoCropView.onLocationListener, 
         });
 
 
-        photoView.setOnScaleChangeListener(new OnScaleChangedListener() {
-            @Override
-            public void onScaleChange(Matrix matrix, float scaleFactorX, float focusX, float focusY) {
-//                RectF rect=photoView.getDisplayRect();
-//                float distanceY = 0;
-//                float distanceX = 0;
-//                float scale = 1.0f;
-//                if (scale != 0) {
-//                    scale = photoView.getScale() / oldScale;
-//                }
-//                if (oldTop != 0) {
-//                    distanceY = rect.top - oldTop;
-//                }
-//                if (oldLeft != 0) {
-//                    distanceX = rect.left - oldLeft;
-//                }
-//                Log.d(TAG, "onMatrixChanged: distance" + distanceX + "==" + distanceY + "++++" + scale);
-////                stickerView.test3(scale, distanceX, distanceY);
-//
-//
-//                stickerView.scale(matrix, scaleFactorX, focusX, focusY,distanceX,distanceY);
-//
-//                oldTop = rect.top;
-//                oldLeft = rect.left;
-            }
-        });
 
-//        photoView.setOnMatrixChangeListener(new OnMatrixChangedListener() {
-//            @Override
-//            public void onMatrixChanged(RectF rect) {
-//                Log.d(TAG, "onMatrixChanged: lefttop" + rect.left + "==" + rect.top);
-//                Log.d(TAG, "onMatrixChanged: rightbottom" + rect.right + "==" + rect.bottom);
-//                Log.d(TAG, "onMatrixChanged: widthandheight" + rect.width() + "==" + rect.height());
-//
-//
-//                float distanceY = 0;
-//                float distanceX = 0;
-//                float scale = 1.0f;
-//                if (scale != 0) {
-//                    scale = photoView.getScale() / oldScale;
-//                }
-//                if (oldTop != 0) {
-//                    distanceY = rect.top - oldTop;
-//                }
-//                if (oldLeft != 0) {
-//                    distanceX = rect.left - oldLeft;
-//                }
-//                Log.d(TAG, "onMatrixChanged: distance" + distanceX + "==" + distanceY + "++++" + scale);
-//                if (scale !=1 ){
-//                    return;
-//                }
-//                stickerView.test3(rect , scale, distanceX, distanceY);
-////                stickerView.test4(rect);
-//                oldTop = rect.top;
-//                oldLeft = rect.left;
-//                oldScale = photoView.getScale();
-//            }
-//        });
-
-//        photoView.setOnSingleFlingListener(new OnSingleFlingListener() {
-//            @Override
-//            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-//                    stickerView.transfer(e1, e2, velocityX, velocityY);
-//                return false;
-//            }
-//        });
-
-//        photoView.setOnDisplayRectChangeListener(new OnDisplayRectChangeListener() {
-//            @Override
-//            public void transfer(float[] processValues) {
-//                Log.d(TAG, "transfer: processValues=" + processValues[0] + "  " + processValues[1] + "  " + processValues[2] + "  " + processValues[3] + "  " + processValues[4] + "  " + processValues[5] + "  " + processValues[6] + "  " + processValues[7] + "  " + processValues[8]);
-//
-//            }
-////                stickerView.test(processValues);
-//        });
-        photoView.setOnDisplayRectChangeListener(new OnDisplayRectChangeListener() {
-            @Override
-            public void transfer(Matrix matrix) {
-//                stickerView.test2(matrix);
-                RectF rect = new RectF();
-                matrix.mapRect(rect);
-                Log.d(TAG, "transfer: lefttop" + rect.left + "==" + rect.top);
-                Log.d(TAG, "transfer: rightbottom" + rect.right + "==" + rect.bottom);
-                Log.d(TAG, "transfer: widthandheight" + rect.width() + "==" + rect.height());
-
-
-            }
-//                stickerView.test(processValues);
-        });
 
 //        Drawable drawable = this.getResources().getDrawable(R.mipmap.ic_launcher);
 ////        BitmapDrawable bitmapDrawable = new BitmapDrawable(drawable);
@@ -228,24 +140,6 @@ public class Main extends Activity implements PhotoCropView.onLocationListener, 
 
     public void add_sticker(View view) {
         addSticker(" ");
-    }
-
-
-    @Override
-    public void locationRect(int startX, int startY, int endX, int endY) {
-        String a = "sx=" + startX + "ex=" + endX + "sy=" + startY + "ey=" + endY;
-        Log.d(TAG, a);
-    }
-
-
-    @Override
-    public void onScaleChange(Matrix mtrix, float scaleFactor, float focusX, float focusY) {
-//        Log.d(TAG, "onScaleChange: "+scaleFactor);
-//        RectF rectF = new RectF();
-//        mtrix.mapRect(rectF);
-//        Log.d(TAG, "onScaleChange: top"+rectF.top);
-//        Log.d(TAG, "onScaleChange: height"+rectF.height());
-//        stickerView.scale(mtrix, scaleFactor, focusX, focusY);
     }
 
 
