@@ -111,7 +111,7 @@ public class Main extends Activity {
         flipIcon.setIconEvent(new DeleteIconEvent());
 
         BitmapStickerIcon heartIcon =
-                new BitmapStickerIcon(ContextCompat.getDrawable(this, R.drawable.sticker_ic_close_white_18dp),
+                new BitmapStickerIcon(ContextCompat.getDrawable(this, R.mipmap.left_bottom_heart_27),
                         BitmapStickerIcon.LEFT_BOTTOM);
         heartIcon.setIconEvent(new FixedEvent());
         stickerView.setIcons(Arrays.asList(deleteIcon, zoomIcon, flipIcon, heartIcon));
