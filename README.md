@@ -1,2 +1,2 @@
 # Maomao-sticker
-photoview and stickerview
+使用stickerview 和 photoview 制作编辑商品信息的功能
