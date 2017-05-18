@@ -21,6 +21,7 @@ import com.mao.view.MyView;
 import com.mao.view.PhotoCropView;
 import com.xiaopo.flying.sticker.BitmapStickerIcon;
 import com.xiaopo.flying.sticker.DeleteIconEvent;
+import com.xiaopo.flying.sticker.FixedEvent;
 import com.xiaopo.flying.sticker.NonIconEvent;
 import com.xiaopo.flying.sticker.StickerView;
 import com.xiaopo.flying.sticker.TextSticker;
@@ -112,7 +113,7 @@ public class Main extends Activity {
         BitmapStickerIcon heartIcon =
                 new BitmapStickerIcon(ContextCompat.getDrawable(this, R.drawable.sticker_ic_close_white_18dp),
                         BitmapStickerIcon.LEFT_BOTTOM);
-        heartIcon.setIconEvent(new NonIconEvent());
+        heartIcon.setIconEvent(new FixedEvent());
         stickerView.setIcons(Arrays.asList(deleteIcon, zoomIcon, flipIcon, heartIcon));
         addSticker("文字最好不要太多，如果太多看看会发生什么");
 
