@@ -1,0 +1,5143 @@
+Index: app/src/main/java/com/mao/view/photoview/OnGestureListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnGestureListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnGestureListener.java	(revision )
+@@ -0,0 +1,27 @@
++/*******************************************************************************
++ * Copyright 2011, 2012 Chris Banes.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ * http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ *******************************************************************************/
++package com.mao.view.photoview;
++
++interface OnGestureListener {
++
++    void onDrag(float dx, float dy);
++
++    void onFling(float startX, float startY, float velocityX,
++                 float velocityY);
++
++    void onScale(float scaleFactor, float focusX, float focusY);
++
++}
+\ No newline at end of file
+Index: app/src/main/res/values/styles.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/styles.xml	(revision )
++++ app/src/main/res/values/styles.xml	(revision )
+@@ -0,0 +1,11 @@
++<resources>
++
++    <!-- Base application theme. -->
++    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
++        <!-- Customize your theme here. -->
++        <item name="colorPrimary">@color/colorPrimary</item>
++        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
++        <item name="colorAccent">@color/colorAccent</item>
++    </style>
++
++</resources>
+Index: app/src/main/java/com/mao/view/photoview/OnSingleFlingListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnSingleFlingListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnSingleFlingListener.java	(revision )
+@@ -0,0 +1,21 @@
++package com.mao.view.photoview;
++
++import android.view.MotionEvent;
++
++/**
++ * A callback to be invoked when the ImageView is flung with a single
++ * touch
++ */
++public interface OnSingleFlingListener {
++
++    /**
++     * A callback to receive where the user flings on a ImageView. You will receive a callback if
++     * the user flings anywhere on the view.
++     *
++     * @param e1        MotionEvent the user first touch.
++     * @param e2        MotionEvent the user last touch.
++     * @param velocityX distance of user's horizontal fling.
++     * @param velocityY distance of user's vertical fling.
++     */
++    boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY);
++}
+Index: gradle.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>GBK
+===================================================================
+--- gradle.properties	(revision )
++++ gradle.properties	(revision )
+@@ -0,0 +1,17 @@
++# Project-wide Gradle settings.
++
++# IDE (e.g. Android Studio) users:
++# Gradle settings configured through the IDE *will override*
++# any settings specified in this file.
++
++# For more details on how to configure your build environment visit
++# http://www.gradle.org/docs/current/userguide/build_environment.html
++
++# Specifies the JVM arguments used for the daemon process.
++# The setting is particularly useful for tweaking memory settings.
++org.gradle.jvmargs=-Xmx1536m
++
++# When configured, Gradle will run in incubating parallel mode.
++# This option should only be used with decoupled projects. More details, visit
++# http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
++# org.gradle.parallel=true
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/StickerView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/StickerView.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/StickerView.java	(revision )
+@@ -0,0 +1,801 @@
++package com.xiaopo.flying.sticker;
++
++import android.content.Context;
++import android.content.res.TypedArray;
++import android.graphics.Bitmap;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.Matrix;
++import android.graphics.Paint;
++import android.graphics.PointF;
++import android.graphics.RectF;
++import android.os.SystemClock;
++import android.support.v4.content.ContextCompat;
++import android.support.v4.view.MotionEventCompat;
++import android.util.AttributeSet;
++import android.util.Log;
++import android.view.MotionEvent;
++import android.widget.FrameLayout;
++
++import java.io.File;
++import java.util.ArrayList;
++import java.util.List;
++
++/**
++ * TODO 找到只画3个icon的方法
++ * TODO 找到放大缩小方法
++ * Sticker view
++ * Created by snowbean on 16-8-2.
++ */
++
++public class StickerView extends FrameLayout {
++
++    private final boolean showIcons;
++    private final boolean showBorder;
++    private final boolean bringToFrontCurrentSticker;
++
++
++    private enum ActionMode {
++        NONE,   //nothing
++        DRAG,   //drag the sticker with your finger
++        ZOOM_WITH_TWO_FINGER,   //zoom in or zoom out the sticker and rotate the sticker with two finger
++        ICON,    //touch in icon
++        CLICK    //Click the Sticker
++    }
++
++    private static final String TAG = "StickerView";
++
++    private static final int DEFAULT_MIN_CLICK_DELAY_TIME = 200;
++    public static final int FLIP_HORIZONTALLY = 0;
++    public static final int FLIP_VERTICALLY = 1;
++    private static final int SCALE_MAX = 4;
++
++
++    private Paint borderPaint;
++
++    private RectF stickerRect;
++    private Matrix sizeMatrix;
++    private Matrix downMatrix;
++
++    private Matrix moveMatrix;
++
++    private BitmapStickerIcon currentIcon;
++
++    private List<BitmapStickerIcon> icons = new ArrayList<>(4);
++    //the first point down position
++    private float downX;
++    private float downY;
++
++
++    private float oldDistance = 0f;
++
++    private float oldDistanceX = 0f;
++    private float oldDistanceY = 0f;
++    private float oldStickerWidth = 0f;
++    private float oldStickerHeight = 0f;
++    private float leftTopX = 0f;
++    private float leftTopY = 0f;
++
++    private float oldRotation = 0f;
++
++    private PointF midPoint;
++
++
++    private ActionMode currentMode = ActionMode.NONE;
++    private List<Sticker> stickers = new ArrayList<>();
++
++    private Sticker handlingSticker;
++
++    private boolean locked;
++    private boolean constrained;
++
++    private int touchSlop = 3;
++
++    private OnStickerOperationListener onStickerOperationListener;
++
++    private long lastClickTime = 0;
++    private int minClickDelayTime = DEFAULT_MIN_CLICK_DELAY_TIME;
++
++    public StickerView(Context context) {
++        this(context, null);
++    }
++
++    public StickerView(Context context, AttributeSet attrs) {
++        this(context, attrs, 0);
++    }
++
++    public StickerView(Context context, AttributeSet attrs, int defStyleAttr) {
++        super(context, attrs, defStyleAttr);
++
++        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.StickerView);
++        showIcons = a.getBoolean(R.styleable.StickerView_showIcons, false);
++        showBorder = a.getBoolean(R.styleable.StickerView_showBorder, false);
++        bringToFrontCurrentSticker =
++                a.getBoolean(R.styleable.StickerView_bringToFrontCurrentSticker, false);
++        //    if (s != null) {
++        //      this.setAlternativeKeyLabel(s.toString());
++        //    }
++        a.recycle();
++
++        borderPaint = new Paint();
++        borderPaint.setAntiAlias(true);
++        borderPaint.setColor(Color.BLACK);
++        borderPaint.setAlpha(128);
++
++        sizeMatrix = new Matrix();
++        downMatrix = new Matrix();
++        moveMatrix = new Matrix();
++
++        stickerRect = new RectF();
++
++        configDefaultIcons();
++    }
++
++    public void configDefaultIcons() {
++        BitmapStickerIcon deleteIcon = new BitmapStickerIcon(
++                ContextCompat.getDrawable(getContext(), R.drawable.sticker_ic_close_white_18dp),
++                BitmapStickerIcon.LEFT_TOP);
++        deleteIcon.setIconEvent(new NonIconEvent());
++        BitmapStickerIcon zoomIcon = new BitmapStickerIcon(
++                ContextCompat.getDrawable(getContext(), R.drawable.sticker_ic_scale_white_18dp),
++                BitmapStickerIcon.RIGHT_BOTOM);
++        zoomIcon.setIconEvent(new ZoomIconEvent());
++        BitmapStickerIcon flipIcon = new BitmapStickerIcon(
++                ContextCompat.getDrawable(getContext(), R.drawable.sticker_ic_flip_white_18dp),
++                BitmapStickerIcon.RIGHT_TOP);
++        flipIcon.setIconEvent(new DeleteIconEvent());
++
++        icons.clear();
++        icons.add(deleteIcon);
++        icons.add(zoomIcon);
++        icons.add(flipIcon);
++    }
++
++    @Override
++    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
++        super.onLayout(changed, left, top, right, bottom);
++        if (changed) {
++            stickerRect.left = left;
++            stickerRect.top = top;
++            stickerRect.right = right;
++            stickerRect.bottom = bottom;
++        }
++    }
++
++    @Override
++    protected void dispatchDraw(Canvas canvas) {
++        super.dispatchDraw(canvas);
++        drawStickers(canvas);
++    }
++
++    private void drawStickers(Canvas canvas) {
++        for (int i = 0; i < stickers.size(); i++) {
++            Sticker sticker = stickers.get(i);
++            if (sticker != null) {
++                sticker.draw(canvas);
++            }
++        }
++
++        if (handlingSticker != null && !locked) {
++
++            float[] bitmapPoints = getStickerPoints(handlingSticker);
++
++            float x1 = bitmapPoints[0];
++            float y1 = bitmapPoints[1];
++            float x2 = bitmapPoints[2];
++            float y2 = bitmapPoints[3];
++            float x3 = bitmapPoints[4];
++            float y3 = bitmapPoints[5];
++            float x4 = bitmapPoints[6];
++            float y4 = bitmapPoints[7];
++
++            if (showBorder) {
++                canvas.drawLine(x1, y1, x2, y2, borderPaint);
++                canvas.drawLine(x1, y1, x3, y3, borderPaint);
++                canvas.drawLine(x2, y2, x4, y4, borderPaint);
++                canvas.drawLine(x4, y4, x3, y3, borderPaint);
++            }
++
++            //draw icons
++            if (showIcons) {
++                float rotation = calculateRotation(x4, y4, x3, y3);
++                for (BitmapStickerIcon icon : icons) {
++                    switch (icon.getPosition()) {
++                        case BitmapStickerIcon.LEFT_TOP:
++
++                            configIconMatrix(icon, x1, y1, rotation);
++                            break;
++
++                        case BitmapStickerIcon.RIGHT_TOP:
++                            configIconMatrix(icon, x2, y2, rotation);
++                            break;
++
++                        case BitmapStickerIcon.LEFT_BOTTOM:
++                            configIconMatrix(icon, x3, y3, rotation);
++                            break;
++
++                        case BitmapStickerIcon.RIGHT_BOTOM:
++                            configIconMatrix(icon, x4, y4, rotation);
++                            break;
++                    }
++                    if (icon.getPosition() == BitmapStickerIcon.LEFT_TOP) continue;//判断如果是左上角不画
++                    icon.draw(canvas, borderPaint);
++                }
++            }
++        }
++    }
++
++    private void configIconMatrix(BitmapStickerIcon icon, float x, float y, float rotation) {
++        icon.setX(x);
++        icon.setY(y);
++        icon.getMatrix().reset();
++
++        icon.getMatrix().postRotate(rotation, icon.getWidth() / 2, icon.getHeight() / 2);
++        icon.getMatrix().postTranslate(x - icon.getWidth() / 2, y - icon.getHeight() / 2);
++    }
++
++    @Override
++    public boolean onInterceptTouchEvent(MotionEvent ev) {
++        if (locked) return super.onInterceptTouchEvent(ev);
++
++        switch (ev.getAction()) {
++            case MotionEvent.ACTION_DOWN:
++                downX = ev.getX();
++                downY = ev.getY();
++
++                return findCurrentIconTouched() != null || findHandlingSticker() != null;
++        }
++
++        return super.onInterceptTouchEvent(ev);
++    }
++
++    @Override
++    public boolean onTouchEvent(MotionEvent event) {
++        if (locked) return super.onTouchEvent(event);
++
++        int action = MotionEventCompat.getActionMasked(event);
++
++        switch (action) {
++            case MotionEvent.ACTION_DOWN:
++                currentMode = ActionMode.DRAG;
++
++                downX = event.getX();
++                downY = event.getY();
++
++                midPoint = calculateMidPoint();
++                oldDistance = calculateDistance(midPoint.x, midPoint.y, downX, downY);
++                oldRotation = calculateRotation(midPoint.x, midPoint.y, downX, downY);
++
++//                oldDistanceX = midPoint.x - downX;
++//                oldDistanceY = midPoint.y - downY;
++
++
++
++                currentIcon = findCurrentIconTouched();
++                if (currentIcon != null) {
++                    currentMode = ActionMode.ICON;
++                    currentIcon.onActionDown(this, event);
++                } else {
++                    handlingSticker = findHandlingSticker();
++                }
++
++                if (handlingSticker != null) {
++                    downMatrix.set(handlingSticker.getMatrix());
++                }
++
++                if (bringToFrontCurrentSticker) {
++                    stickers.remove(handlingSticker);
++                    stickers.add(handlingSticker);
++                }
++                if(null != handlingSticker){
++                    float[] boundPoints = handlingSticker.getMappedBoundPoints();
++                    leftTopX = boundPoints[0];
++                    leftTopY = boundPoints[1];
++                    oldStickerWidth = boundPoints[2] - boundPoints[0];
++                    oldStickerHeight = boundPoints[5] - boundPoints[1];
++                }
++
++
++
++                invalidate();
++                break;
++
++            case MotionEvent.ACTION_POINTER_DOWN:
++
++                oldDistance = calculateDistance(event);
++                oldRotation = calculateRotation(event);
++
++                midPoint = calculateMidPoint(event);
++
++                if (handlingSticker != null && isInStickerArea(handlingSticker, event.getX(1),
++                        event.getY(1)) && findCurrentIconTouched() == null) {
++                    currentMode = ActionMode.ZOOM_WITH_TWO_FINGER;
++                }
++                break;
++
++            case MotionEvent.ACTION_MOVE:
++                oldDistanceX = event.getX() - downX;
++                oldDistanceY = event.getY() - downY;
++                handleCurrentMode(event);
++                invalidate();
++                break;
++
++            case MotionEvent.ACTION_UP:
++                long currentTime = SystemClock.uptimeMillis();
++
++                if (currentMode == ActionMode.ICON && currentIcon != null && handlingSticker != null) {
++                    currentIcon.onActionUp(this, event);
++                }
++
++                if (currentMode == ActionMode.DRAG
++                        && Math.abs(event.getX() - downX) < touchSlop
++                        && Math.abs(event.getY() - downY) < touchSlop
++                        && handlingSticker != null) {
++                    currentMode = ActionMode.CLICK;
++                    if (onStickerOperationListener != null) {
++                        onStickerOperationListener.onStickerClicked(handlingSticker);
++                    }
++                    if (currentTime - lastClickTime < minClickDelayTime) {
++                        if (onStickerOperationListener != null) {
++                            onStickerOperationListener.onStickerDoubleTapped(handlingSticker);
++                        }
++                    }
++                }
++
++                if (currentMode == ActionMode.DRAG && handlingSticker != null) {
++                    if (onStickerOperationListener != null) {
++                        onStickerOperationListener.onStickerDragFinished(handlingSticker);
++                    }
++                }
++
++                currentMode = ActionMode.NONE;
++                lastClickTime = currentTime;
++                break;
++
++            case MotionEvent.ACTION_POINTER_UP:
++                if (currentMode == ActionMode.ZOOM_WITH_TWO_FINGER && handlingSticker != null) {
++                    if (onStickerOperationListener != null) {
++                        onStickerOperationListener.onStickerZoomFinished(handlingSticker);
++                    }
++                }
++                currentMode = ActionMode.NONE;
++                break;
++        }//end of switch(action)
++
++        return true;
++    }
++
++    private void handleCurrentMode(MotionEvent event) {
++        switch (currentMode) {
++            case NONE:
++                break;
++            case DRAG:
++                if (handlingSticker != null) {
++                    moveMatrix.set(downMatrix);
++                    moveMatrix.postTranslate(event.getX() - downX, event.getY() - downY);
++                    handlingSticker.getMatrix().set(moveMatrix);
++                    //constrain sticker
++                    if (constrained) constrainSticker();
++                }
++                break;
++            case ZOOM_WITH_TWO_FINGER:
++                if (handlingSticker != null) {
++                    float newDistance = calculateDistance(event);
++                    float newRotation = calculateRotation(event);
++
++                    moveMatrix.set(downMatrix);
++                    moveMatrix.postScale(newDistance / oldDistance, newDistance / oldDistance, midPoint.x,
++                            midPoint.y);
++//          moveMatrix.postRotate(newRotation - oldRotation, midPoint.x, midPoint.y);
++                    handlingSticker.getMatrix().set(moveMatrix);
++                }
++
++                break;
++
++            case ICON:
++                if (handlingSticker != null && currentIcon != null) {
++                    currentIcon.onActionMove(this, event);
++                }
++
++                break;
++        }// end of switch(currentMode)
++    }
++
++    public void zoomAndRotateCurrentSticker(MotionEvent event) {
++        zoomAndRotateSticker(handlingSticker, event);
++    }
++
++    public void zoomAndRotateSticker(Sticker sticker, MotionEvent event) {
++        if (sticker != null) {
++//      float[] boundPoints = handlingSticker.getMappedBoundPoints();
++//      float newDistance = calculateDistance(midPoint.x, midPoint.y, event.getX(), event.getY());
++            moveMatrix.set(downMatrix);
++
++//            for (float f : boundPoints) {
++//                Log.d(TAG, "zoomAndRotateSticker: f" + f);
++//            }
++//            Log.d(TAG, "zoomAndRotateSticker: width"+width);
++//            Log.d(TAG, "zoomAndRotateSticker: disx"+oldDistanceX);
++//            Log.d(TAG, "zoomAndRotateSticker: height"+height);
++//            Log.d(TAG, "zoomAndRotateSticker: disy"+oldDistanceY);
++//
++//            Log.d(TAG, "zoomAndRotateSticker: end");
++            float sx = (oldStickerWidth + oldDistanceX) / oldStickerWidth;
++            float sy = (oldStickerHeight + oldDistanceY) / oldStickerHeight;
++
++            try {
++
++                //在特殊情况下不处理矩阵
++                //判断最大的放大和缩小的范围是10倍
++//                if (sx < 0 || sy < 0) {
++//                    sx = 0.1f;
++//                    sy = 0.1f;
++////                return;
++//                }
++                if (sx < 0.001) return;
++                if (sy < 0.001) return;
++
++            } catch (Exception e) {
++                e.printStackTrace();
++            }
++            Log.d(TAG, "zoomAndRotateSticker: sx" + sx);
++            Log.d(TAG, "zoomAndRotateSticker: sy" + sy);
++            moveMatrix.postScale(sx, sy, leftTopX,
++                    leftTopY);
++            handlingSticker.getMatrix().set(moveMatrix);
++        }
++    }
++
++
++    private void constrainSticker() {
++        float moveX = 0;
++        float moveY = 0;
++        PointF currentCenterPoint = handlingSticker.getMappedCenterPoint();
++        if (currentCenterPoint.x < 0) {
++            moveX = -currentCenterPoint.x;
++        }
++
++        if (currentCenterPoint.x > getWidth()) {
++            moveX = getWidth() - currentCenterPoint.x;
++        }
++
++        if (currentCenterPoint.y < 0) {
++            moveY = -currentCenterPoint.y;
++        }
++
++        if (currentCenterPoint.y > getHeight()) {
++            moveY = getHeight() - currentCenterPoint.y;
++        }
++
++        handlingSticker.getMatrix().postTranslate(moveX, moveY);
++    }
++
++    private BitmapStickerIcon findCurrentIconTouched() {
++        for (BitmapStickerIcon icon : icons) {
++            float x = icon.getX() - downX;
++            float y = icon.getY() - downY;
++            float distance_pow_2 = x * x + y * y;
++            if (distance_pow_2 <= Math.pow(icon.getIconRadius() + icon.getIconRadius(), 2)) {
++                return icon;
++            }
++        }
++
++        return null;
++    }
++
++    /**
++     * find the touched Sticker
++     **/
++    private Sticker findHandlingSticker() {
++        for (int i = stickers.size() - 1; i >= 0; i--) {
++            if (isInStickerArea(stickers.get(i), downX, downY)) {
++                return stickers.get(i);
++            }
++        }
++        return null;
++    }
++
++    private boolean isInStickerArea(Sticker sticker, float downX, float downY) {
++        return sticker.contains(downX, downY);
++    }
++
++    private PointF calculateMidPoint(MotionEvent event) {
++        if (event == null || event.getPointerCount() < 2) return new PointF();
++        float x = (event.getX(0) + event.getX(1)) / 2;
++        float y = (event.getY(0) + event.getY(1)) / 2;
++        return new PointF(x, y);
++    }
++
++    private PointF calculateMidPoint() {
++
++        if (handlingSticker == null) return new PointF();
++        return handlingSticker.getMappedCenterPoint();
++    }
++
++    /**
++     * calculate rotation in line with two fingers and x-axis
++     **/
++    private float calculateRotation(MotionEvent event) {
++        if (event == null || event.getPointerCount() < 2) return 0f;
++        double x = event.getX(0) - event.getX(1);
++        double y = event.getY(0) - event.getY(1);
++        double radians = Math.atan2(y, x);
++        return (float) Math.toDegrees(radians);
++    }
++
++    private float calculateRotation(float x1, float y1, float x2, float y2) {
++        double x = x1 - x2;
++        double y = y1 - y2;
++        double radians = Math.atan2(y, x);
++        return (float) Math.toDegrees(radians);
++    }
++
++    /**
++     * calculate Distance in two fingers
++     **/
++    private float calculateDistance(MotionEvent event) {
++        if (event == null || event.getPointerCount() < 2) return 0f;
++        float x = event.getX(0) - event.getX(1);
++        float y = event.getY(0) - event.getY(1);
++
++        return (float) Math.sqrt(x * x + y * y);
++    }
++
++    private float calculateDistance(float x1, float y1, float x2, float y2) {
++        double x = x1 - x2;
++        double y = y1 - y2;
++
++        return (float) Math.sqrt(x * x + y * y);
++    }
++
++    @Override
++    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
++        super.onSizeChanged(w, h, oldw, oldh);
++        for (int i = 0; i < stickers.size(); i++) {
++            Sticker sticker = stickers.get(i);
++            if (sticker != null) {
++                transformSticker(sticker);
++            }
++        }
++    }
++
++    /**
++     * Sticker's drawable will be too bigger or smaller
++     * This method is to transform it to fit
++     * step 1：let the center of the sticker image is coincident with the center of the View.
++     * step 2：Calculate the zoom and zoom
++     **/
++    private void transformSticker(Sticker sticker) {
++        if (sticker == null) {
++            Log.e(TAG, "transformSticker: the bitmapSticker is null or the bitmapSticker bitmap is null");
++            return;
++        }
++
++        if (sizeMatrix != null) {
++            sizeMatrix.reset();
++        }
++
++        //step 1
++        float offsetX = (getWidth() - sticker.getWidth()) / 2;
++        float offsetY = (getHeight() - sticker.getHeight()) / 2;
++
++        sizeMatrix.postTranslate(offsetX, offsetY);
++
++        //step 2
++        float scaleFactor;
++        if (getWidth() < getHeight()) {
++            scaleFactor = (float) getWidth() / sticker.getWidth();
++        } else {
++            scaleFactor = (float) getHeight() / sticker.getHeight();
++        }
++
++        sizeMatrix.postScale(scaleFactor / 2, scaleFactor / 2, getWidth() / 2, getHeight() / 2);
++
++        sticker.getMatrix().reset();
++        sticker.getMatrix().set(sizeMatrix);
++
++        invalidate();
++    }
++
++    public void flipCurrentSticker(int direction) {
++        flip(handlingSticker, direction);
++    }
++
++    public void flip(Sticker sticker, int direction) {
++        if (sticker != null) {
++            if (direction == FLIP_HORIZONTALLY) {
++                sticker.getMatrix().preScale(-1, 1, sticker.getCenterPoint().x, sticker.getCenterPoint().y);
++                sticker.setFlippedHorizontally(!sticker.isFlippedHorizontally);
++            } else if (direction == FLIP_VERTICALLY) {
++                sticker.getMatrix().preScale(1, -1, sticker.getCenterPoint().x, sticker.getCenterPoint().y);
++                sticker.setFlippedVertically(!sticker.isFlippedVertically);
++            }
++
++            if (onStickerOperationListener != null) {
++                onStickerOperationListener.onStickerFlipped(sticker);
++            }
++
++            invalidate();
++        }
++    }
++
++    public boolean replace(Sticker sticker) {
++        return replace(sticker, true);
++    }
++
++    public boolean replace(Sticker sticker, boolean needStayState) {
++        if (handlingSticker != null && sticker != null) {
++            if (needStayState) {
++                sticker.getMatrix().set(handlingSticker.getMatrix());
++                sticker.setFlippedVertically(handlingSticker.isFlippedVertically());
++                sticker.setFlippedHorizontally(handlingSticker.isFlippedHorizontally());
++            } else {
++                handlingSticker.getMatrix().reset();
++                // reset scale, angle, and put it in center
++                float offsetX = (getWidth() - handlingSticker.getWidth()) / 2;
++                float offsetY = (getHeight() - handlingSticker.getHeight()) / 2;
++                sticker.getMatrix().postTranslate(offsetX, offsetY);
++
++                float scaleFactor;
++                if (getWidth() < getHeight()) {
++                    scaleFactor = (float) getWidth() / handlingSticker.getDrawable().getIntrinsicWidth();
++                } else {
++                    scaleFactor = (float) getHeight() / handlingSticker.getDrawable().getIntrinsicHeight();
++                }
++                sticker.getMatrix()
++                        .postScale(scaleFactor / 2, scaleFactor / 2, getWidth() / 2, getHeight() / 2);
++            }
++            int index = stickers.indexOf(handlingSticker);
++            stickers.set(index, sticker);
++            handlingSticker = sticker;
++
++            invalidate();
++            return true;
++        } else {
++            return false;
++        }
++    }
++
++    public boolean remove(Sticker sticker) {
++        if (stickers.contains(sticker)) {
++            stickers.remove(sticker);
++            if (onStickerOperationListener != null) {
++                onStickerOperationListener.onStickerDeleted(sticker);
++            }
++            if (handlingSticker == sticker) {
++                handlingSticker = null;
++            }
++            invalidate();
++
++            return true;
++        } else {
++            Log.d(TAG, "remove: the sticker is not in this StickerView");
++
++            return false;
++        }
++    }
++
++    public boolean removeCurrentSticker() {
++        return remove(handlingSticker);
++    }
++
++    public void removeAllStickers() {
++        stickers.clear();
++        if (handlingSticker != null) {
++            handlingSticker.release();
++            handlingSticker = null;
++        }
++        invalidate();
++    }
++
++    public void addSticker(Sticker sticker) {
++        if (sticker == null) {
++            Log.e(TAG, "Sticker to be added is null!");
++            return;
++        }
++        float offsetX = (getWidth() - sticker.getWidth()) / 2;
++        float offsetY = (getHeight() - sticker.getHeight()) / 2;
++        sticker.getMatrix().postTranslate(offsetX, offsetY);
++
++        float scaleFactor;
++        if (getWidth() < getHeight()) {
++            scaleFactor = (float) getWidth() / sticker.getDrawable().getIntrinsicWidth();
++        } else {
++            scaleFactor = (float) getHeight() / sticker.getDrawable().getIntrinsicHeight();
++        }
++        sticker.getMatrix()
++                .postScale(scaleFactor / 2, scaleFactor / 2, getWidth() / 2, getHeight() / 2);
++
++        handlingSticker = sticker;
++        stickers.add(sticker);
++
++        invalidate();
++    }
++
++    public float[] getStickerPoints(Sticker sticker) {
++        if (sticker == null) return new float[8];
++        return sticker.getMappedBoundPoints();
++    }
++
++    public void save(File file) {
++        StickerUtils.saveImageToGallery(file, createBitmap());
++        StickerUtils.notifySystemGallery(getContext(), file);
++    }
++
++    public Bitmap createBitmap() {
++        handlingSticker = null;
++        Bitmap bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
++        Canvas canvas = new Canvas(bitmap);
++        this.draw(canvas);
++        return bitmap;
++    }
++
++    public int getStickerCount() {
++        return stickers.size();
++    }
++
++    public boolean isNoneSticker() {
++        return getStickerCount() == 0;
++    }
++
++    public boolean isLocked() {
++        return locked;
++    }
++
++    public void setLocked(boolean locked) {
++        this.locked = locked;
++        invalidate();
++    }
++
++    public void setMinClickDelayTime(int minClickDelayTime) {
++        this.minClickDelayTime = minClickDelayTime;
++    }
++
++    public int getMinClickDelayTime() {
++        return minClickDelayTime;
++    }
++
++    public boolean isConstrained() {
++        return constrained;
++    }
++
++    public void setConstrained(boolean constrained) {
++        this.constrained = constrained;
++        postInvalidate();
++    }
++
++    public void setOnStickerOperationListener(OnStickerOperationListener onStickerOperationListener) {
++        this.onStickerOperationListener = onStickerOperationListener;
++    }
++
++    public OnStickerOperationListener getOnStickerOperationListener() {
++        return onStickerOperationListener;
++    }
++
++    public Sticker getCurrentSticker() {
++        return handlingSticker;
++    }
++
++    public List<BitmapStickerIcon> getIcons() {
++        return icons;
++    }
++
++    public void setIcons(List<BitmapStickerIcon> icons) {
++        this.icons = icons;
++        invalidate();
++    }
++
++    public interface OnStickerOperationListener {
++        void onStickerClicked(Sticker sticker);
++
++        void onStickerDeleted(Sticker sticker);
++
++        void onStickerDragFinished(Sticker sticker);
++
++        void onStickerZoomFinished(Sticker sticker);
++
++        void onStickerFlipped(Sticker sticker);
++
++        void onStickerDoubleTapped(Sticker sticker);
++    }
++}
+Index: app/src/main/java/com/mao/view/photoview/OnScaleChangedListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnScaleChangedListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnScaleChangedListener.java	(revision )
+@@ -0,0 +1,17 @@
++package com.mao.view.photoview;
++
++
++/**
++ * Interface definition for callback to be invoked when attached ImageView scale changes
++ */
++public interface OnScaleChangedListener {
++
++    /**
++     * Callback for when the scale changes
++     *
++     * @param scaleFactor the scale factor (less than 1 for zoom out, greater than 1 for zoom in)
++     * @param focusX      focal point X position
++     * @param focusY      focal point Y position
++     */
++    void onScaleChange(float scaleFactor, float focusX, float focusY);
++}
+Index: app/src/main/res/values/attrs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/attrs.xml	(revision )
++++ app/src/main/res/values/attrs.xml	(revision )
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <declare-styleable name="MyView">
++        <attr name="img" format="reference"></attr>
++    </declare-styleable>
++    <declare-styleable name="StickerView">
++        <attr name="showIcons" format="boolean" />
++        <attr name="showBorder" format="boolean" />
++        <attr name="bringToFrontCurrentSticker" format="boolean" />
++    </declare-styleable>
++
++</resources>
+Index: sticker/.gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/.gitignore	(revision )
++++ sticker/.gitignore	(revision )
+@@ -0,0 +1,1 @@
++/build
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/DrawableSticker.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/DrawableSticker.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/DrawableSticker.java	(revision )
+@@ -0,0 +1,57 @@
++package com.xiaopo.flying.sticker;
++
++import android.graphics.Canvas;
++import android.graphics.Matrix;
++import android.graphics.Rect;
++import android.graphics.drawable.Drawable;
++
++/**
++ * @author wupanjie
++ */
++public class DrawableSticker extends Sticker {
++
++  private Drawable drawable;
++  private Rect realBounds;
++
++  public DrawableSticker(Drawable drawable) {
++    this.drawable = drawable;
++    this.matrix = new Matrix();
++    realBounds = new Rect(0, 0, getWidth(), getHeight());
++  }
++
++  @Override public Drawable getDrawable() {
++    return drawable;
++  }
++
++  @Override public void setDrawable(Drawable drawable) {
++    this.drawable = drawable;
++  }
++
++  @Override public void draw(Canvas canvas) {
++    canvas.save();
++    canvas.concat(matrix);
++    drawable.setBounds(realBounds);
++    drawable.draw(canvas);
++    canvas.restore();
++  }
++
++  @Override
++  public void setAlpha(int alpha) {
++    drawable.setAlpha(alpha);
++  }
++
++  @Override public int getWidth() {
++    return drawable.getIntrinsicWidth();
++  }
++
++  @Override public int getHeight() {
++    return drawable.getIntrinsicHeight();
++  }
++
++  @Override public void release() {
++    super.release();
++    if (drawable != null) {
++      drawable = null;
++    }
++  }
++}
+Index: app/src/main/java/com/mao/view/photoview/PhotoViewAttacher.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/PhotoViewAttacher.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/PhotoViewAttacher.java	(revision )
+@@ -0,0 +1,837 @@
++/*******************************************************************************
++ * Copyright 2011, 2012 Chris Banes.
++ * <p>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p>
++ * http://www.apache.org/licenses/LICENSE-2.0
++ * <p>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ *******************************************************************************/
++package com.mao.view.photoview;
++
++import android.content.Context;
++import android.graphics.Matrix;
++import android.graphics.Matrix.ScaleToFit;
++import android.graphics.RectF;
++import android.graphics.drawable.Drawable;
++import android.support.v4.view.MotionEventCompat;
++import android.view.GestureDetector;
++import android.view.MotionEvent;
++import android.view.View;
++import android.view.View.OnLongClickListener;
++import android.view.ViewParent;
++import android.view.animation.AccelerateDecelerateInterpolator;
++import android.view.animation.Interpolator;
++import android.widget.ImageView;
++import android.widget.ImageView.ScaleType;
++import android.widget.OverScroller;
++
++/**
++ * The component of {@link PhotoView} which does the work allowing for zooming, scaling, panning, etc.
++ * It is made public in case you need to subclass something other than {@link ImageView} and still
++ * gain the functionality that {@link PhotoView} offers
++ */
++public class PhotoViewAttacher implements View.OnTouchListener,
++        OnGestureListener,
++        View.OnLayoutChangeListener {
++
++    private static float DEFAULT_MAX_SCALE = 3.0f;
++    private static float DEFAULT_MID_SCALE = 1.75f;
++    private static float DEFAULT_MIN_SCALE = 1.0f;
++    private static int DEFAULT_ZOOM_DURATION = 200;
++
++    private static final int EDGE_NONE = -1;
++    private static final int EDGE_LEFT = 0;
++    private static final int EDGE_RIGHT = 1;
++    private static final int EDGE_BOTH = 2;
++    private static int SINGLE_TOUCH = 1;
++
++    private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
++    private int mZoomDuration = DEFAULT_ZOOM_DURATION;
++    private float mMinScale = DEFAULT_MIN_SCALE;
++    private float mMidScale = DEFAULT_MID_SCALE;
++    private float mMaxScale = DEFAULT_MAX_SCALE;
++
++    private boolean mAllowParentInterceptOnEdge = true;
++    private boolean mBlockParentIntercept = false;
++
++    private ImageView mImageView;
++
++    // Gesture Detectors
++    private GestureDetector mGestureDetector;
++    private CustomGestureDetector mScaleDragDetector;
++
++    // These are set so we don't keep allocating them on the heap
++    private final Matrix mBaseMatrix = new Matrix();
++    private final Matrix mDrawMatrix = new Matrix();
++    private final Matrix mSuppMatrix = new Matrix();
++    private final RectF mDisplayRect = new RectF();
++    private final float[] mMatrixValues = new float[9];
++
++    // Listeners
++    private OnMatrixChangedListener mMatrixChangeListener;
++    private OnPhotoTapListener mPhotoTapListener;
++    private OnOutsidePhotoTapListener mOutsidePhotoTapListener;
++    private View.OnClickListener mOnClickListener;
++    private OnLongClickListener mLongClickListener;
++    private OnScaleChangedListener mScaleChangeListener;
++    private OnSingleFlingListener mSingleFlingListener;
++
++    private FlingRunnable mCurrentFlingRunnable;
++    private int mScrollEdge = EDGE_BOTH;
++    private float mBaseRotation;
++
++    private boolean mZoomEnabled = true;
++    private ScaleType mScaleType = ScaleType.FIT_CENTER;
++
++    public PhotoViewAttacher(ImageView imageView) {
++        mImageView = imageView;
++        imageView.setOnTouchListener(this);
++        imageView.addOnLayoutChangeListener(this);
++
++        if (imageView.isInEditMode()) {
++            return;
++        }
++
++        mBaseRotation = 0.0f;
++
++        // Create Gesture Detectors...
++        mScaleDragDetector = new CustomGestureDetector(imageView.getContext(), this);
++
++        mGestureDetector = new GestureDetector(imageView.getContext(), new GestureDetector.SimpleOnGestureListener() {
++
++            // forward long click listener
++            @Override
++            public void onLongPress(MotionEvent e) {
++                if (mLongClickListener != null) {
++                    mLongClickListener.onLongClick(mImageView);
++                }
++            }
++
++            @Override
++            public boolean onFling(MotionEvent e1, MotionEvent e2,
++                                   float velocityX, float velocityY) {
++                if (mSingleFlingListener != null) {
++                    if (getScale() > DEFAULT_MIN_SCALE) {
++                        return false;
++                    }
++
++                    if (MotionEventCompat.getPointerCount(e1) > SINGLE_TOUCH
++                            || MotionEventCompat.getPointerCount(e2) > SINGLE_TOUCH) {
++                        return false;
++                    }
++
++                    return mSingleFlingListener.onFling(e1, e2, velocityX, velocityY);
++                }
++                return false;
++            }
++        });
++
++        mGestureDetector.setOnDoubleTapListener(new GestureDetector.OnDoubleTapListener() {
++            @Override
++            public boolean onSingleTapConfirmed(MotionEvent e) {
++                if (mOnClickListener != null) {
++                    mOnClickListener.onClick(mImageView);
++                }
++                final RectF displayRect = getDisplayRect();
++
++                if (displayRect != null) {
++                    final float x = e.getX(), y = e.getY();
++
++                    // Check to see if the user tapped on the photo
++                    if (displayRect.contains(x, y)) {
++
++                        float xResult = (x - displayRect.left)
++                                / displayRect.width();
++                        float yResult = (y - displayRect.top)
++                                / displayRect.height();
++
++                        if (mPhotoTapListener != null) {
++                            mPhotoTapListener.onPhotoTap(mImageView, xResult, yResult);
++                        }
++                        return true;
++                    } else {
++                        if (mOutsidePhotoTapListener != null) {
++                            mOutsidePhotoTapListener.onOutsidePhotoTap(mImageView);
++                        }
++                    }
++                }
++                return false;
++            }
++
++            @Override
++            public boolean onDoubleTap(MotionEvent ev) {
++                try {
++                    float scale = getScale();
++                    float x = ev.getX();
++                    float y = ev.getY();
++
++                    if (scale < getMediumScale()) {
++                        setScale(getMediumScale(), x, y, true);
++                    } else if (scale >= getMediumScale() && scale < getMaximumScale()) {
++                        setScale(getMaximumScale(), x, y, true);
++                    } else {
++                        setScale(getMinimumScale(), x, y, true);
++                    }
++                } catch (ArrayIndexOutOfBoundsException e) {
++                    // Can sometimes happen when getX() and getY() is called
++                }
++
++                return true;
++            }
++
++            @Override
++            public boolean onDoubleTapEvent(MotionEvent e) {
++                // Wait for the confirmed onDoubleTap() instead
++                return false;
++            }
++        });
++    }
++
++    public void setOnDoubleTapListener(GestureDetector.OnDoubleTapListener newOnDoubleTapListener) {
++        this.mGestureDetector.setOnDoubleTapListener(newOnDoubleTapListener);
++    }
++
++    public void setOnScaleChangeListener(OnScaleChangedListener onScaleChangeListener) {
++        this.mScaleChangeListener = onScaleChangeListener;
++    }
++
++    public void setOnSingleFlingListener(OnSingleFlingListener onSingleFlingListener) {
++        this.mSingleFlingListener = onSingleFlingListener;
++    }
++
++    @Deprecated
++    public boolean isZoomEnabled() {
++        return mZoomEnabled;
++    }
++
++    public RectF getDisplayRect() {
++        checkMatrixBounds();
++        return getDisplayRect(getDrawMatrix());
++    }
++
++    public boolean setDisplayMatrix(Matrix finalMatrix) {
++        if (finalMatrix == null) {
++            throw new IllegalArgumentException("Matrix cannot be null");
++        }
++
++        if (mImageView.getDrawable() == null) {
++            return false;
++        }
++
++        mSuppMatrix.set(finalMatrix);
++        setImageViewMatrix(getDrawMatrix());
++        checkMatrixBounds();
++
++        return true;
++    }
++
++    public void setBaseRotation(final float degrees) {
++        mBaseRotation = degrees % 360;
++        update();
++        setRotationBy(mBaseRotation);
++        checkAndDisplayMatrix();
++    }
++
++    public void setRotationTo(float degrees) {
++        mSuppMatrix.setRotate(degrees % 360);
++        checkAndDisplayMatrix();
++    }
++
++    public void setRotationBy(float degrees) {
++        mSuppMatrix.postRotate(degrees % 360);
++        checkAndDisplayMatrix();
++    }
++
++    public float getMinimumScale() {
++        return mMinScale;
++    }
++
++    public float getMediumScale() {
++        return mMidScale;
++    }
++
++    public float getMaximumScale() {
++        return mMaxScale;
++    }
++
++    public float getScale() {
++        return (float) Math.sqrt((float) Math.pow(getValue(mSuppMatrix, Matrix.MSCALE_X), 2) + (float) Math.pow(getValue(mSuppMatrix, Matrix.MSKEW_Y), 2));
++    }
++
++    public ScaleType getScaleType() {
++        return mScaleType;
++    }
++
++    @Override
++    public void onDrag(float dx, float dy) {
++        if (mScaleDragDetector.isScaling()) {
++            return; // Do not drag if we are already scaling
++        }
++
++        mSuppMatrix.postTranslate(dx, dy);
++        checkAndDisplayMatrix();
++
++        /*
++         * Here we decide whether to let the ImageView's parent to start taking
++         * over the touch event.
++         *
++         * First we check whether this function is enabled. We never want the
++         * parent to take over if we're scaling. We then check the edge we're
++         * on, and the direction of the scroll (i.e. if we're pulling against
++         * the edge, aka 'overscrolling', let the parent take over).
++         */
++        ViewParent parent = mImageView.getParent();
++        if (mAllowParentInterceptOnEdge && !mScaleDragDetector.isScaling() && !mBlockParentIntercept) {
++            if (mScrollEdge == EDGE_BOTH
++                    || (mScrollEdge == EDGE_LEFT && dx >= 1f)
++                    || (mScrollEdge == EDGE_RIGHT && dx <= -1f)) {
++                if (parent != null) {
++                    parent.requestDisallowInterceptTouchEvent(false);
++                }
++            }
++        } else {
++            if (parent != null) {
++                parent.requestDisallowInterceptTouchEvent(true);
++            }
++        }
++    }
++
++    @Override
++    public void onFling(float startX, float startY, float velocityX,
++                        float velocityY) {
++        mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
++        mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
++                getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
++        mImageView.post(mCurrentFlingRunnable);
++    }
++
++    @Override
++    public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
++        // Update our base matrix, as the bounds have changed
++        updateBaseMatrix(mImageView.getDrawable());
++    }
++
++    @Override
++    public void onScale(float scaleFactor, float focusX, float focusY) {
++        if ((getScale() < mMaxScale || scaleFactor < 1f) && (getScale() > mMinScale || scaleFactor > 1f)) {
++            if (mScaleChangeListener != null) {
++                mScaleChangeListener.onScaleChange(scaleFactor, focusX, focusY);
++            }
++            mSuppMatrix.postScale(scaleFactor, scaleFactor, focusX, focusY);
++            checkAndDisplayMatrix();
++        }
++    }
++
++    @Override
++    public boolean onTouch(View v, MotionEvent ev) {
++        boolean handled = false;
++
++        if (mZoomEnabled && Util.hasDrawable((ImageView) v)) {
++            switch (ev.getAction()) {
++                case MotionEvent.ACTION_DOWN:
++                    ViewParent parent = v.getParent();
++                    // First, disable the Parent from intercepting the touch
++                    // event
++                    if (parent != null) {
++                        parent.requestDisallowInterceptTouchEvent(true);
++                    }
++
++                    // If we're flinging, and the user presses down, cancel
++                    // fling
++                    cancelFling();
++                    break;
++
++                case MotionEvent.ACTION_CANCEL:
++                case MotionEvent.ACTION_UP:
++                    // If the user has zoomed less than min scale, zoom back
++                    // to min scale
++                    if (getScale() < mMinScale) {
++                        RectF rect = getDisplayRect();
++                        if (rect != null) {
++                            v.post(new AnimatedZoomRunnable(getScale(), mMinScale,
++                                    rect.centerX(), rect.centerY()));
++                            handled = true;
++                        }
++                    }
++                    break;
++            }
++
++            // Try the Scale/Drag detector
++            if (mScaleDragDetector != null) {
++                boolean wasScaling = mScaleDragDetector.isScaling();
++                boolean wasDragging = mScaleDragDetector.isDragging();
++
++                handled = mScaleDragDetector.onTouchEvent(ev);
++
++                boolean didntScale = !wasScaling && !mScaleDragDetector.isScaling();
++                boolean didntDrag = !wasDragging && !mScaleDragDetector.isDragging();
++
++                mBlockParentIntercept = didntScale && didntDrag;
++            }
++
++            // Check to see if the user double tapped
++            if (mGestureDetector != null && mGestureDetector.onTouchEvent(ev)) {
++                handled = true;
++            }
++
++        }
++
++        return handled;
++    }
++
++    public void setAllowParentInterceptOnEdge(boolean allow) {
++        mAllowParentInterceptOnEdge = allow;
++    }
++
++    public void setMinimumScale(float minimumScale) {
++        Util.checkZoomLevels(minimumScale, mMidScale, mMaxScale);
++        mMinScale = minimumScale;
++    }
++
++    public void setMediumScale(float mediumScale) {
++        Util.checkZoomLevels(mMinScale, mediumScale, mMaxScale);
++        mMidScale = mediumScale;
++    }
++
++    public void setMaximumScale(float maximumScale) {
++        Util.checkZoomLevels(mMinScale, mMidScale, maximumScale);
++        mMaxScale = maximumScale;
++    }
++
++    public void setScaleLevels(float minimumScale, float mediumScale, float maximumScale) {
++        Util.checkZoomLevels(minimumScale, mediumScale, maximumScale);
++        mMinScale = minimumScale;
++        mMidScale = mediumScale;
++        mMaxScale = maximumScale;
++    }
++
++    public void setOnLongClickListener(OnLongClickListener listener) {
++        mLongClickListener = listener;
++    }
++
++    public void setOnClickListener(View.OnClickListener listener) {
++        mOnClickListener = listener;
++    }
++
++    public void setOnMatrixChangeListener(OnMatrixChangedListener listener) {
++        mMatrixChangeListener = listener;
++    }
++
++    public void setOnPhotoTapListener(OnPhotoTapListener listener) {
++        mPhotoTapListener = listener;
++    }
++
++    public void setOnOutsidePhotoTapListener(OnOutsidePhotoTapListener mOutsidePhotoTapListener) {
++        this.mOutsidePhotoTapListener = mOutsidePhotoTapListener;
++    }
++
++    public void setScale(float scale) {
++        setScale(scale, false);
++    }
++
++    public void setScale(float scale, boolean animate) {
++        setScale(scale,
++                (mImageView.getRight()) / 2,
++                (mImageView.getBottom()) / 2,
++                animate);
++    }
++
++    public void setScale(float scale, float focalX, float focalY,
++                         boolean animate) {
++        // Check to see if the scale is within bounds
++        if (scale < mMinScale || scale > mMaxScale) {
++            throw new IllegalArgumentException("Scale must be within the range of minScale and maxScale");
++        }
++
++        if (animate) {
++            mImageView.post(new AnimatedZoomRunnable(getScale(), scale,
++                    focalX, focalY));
++        } else {
++            mSuppMatrix.setScale(scale, scale, focalX, focalY);
++            checkAndDisplayMatrix();
++        }
++    }
++
++    /**
++     * Set the zoom interpolator
++     *
++     * @param interpolator the zoom interpolator
++     */
++    public void setZoomInterpolator(Interpolator interpolator) {
++        mInterpolator = interpolator;
++    }
++
++    public void setScaleType(ScaleType scaleType) {
++        if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
++            mScaleType = scaleType;
++            update();
++        }
++    }
++
++    public boolean isZoomable() {
++        return mZoomEnabled;
++    }
++
++    public void setZoomable(boolean zoomable) {
++        mZoomEnabled = zoomable;
++        update();
++    }
++
++    public void update() {
++        if (mZoomEnabled) {
++            // Update the base matrix using the current drawable
++            updateBaseMatrix(mImageView.getDrawable());
++        } else {
++            // Reset the Matrix...
++            resetMatrix();
++        }
++    }
++
++    /**
++     * Get the display matrix
++     *
++     * @param matrix target matrix to copy to
++     */
++    public void getDisplayMatrix(Matrix matrix) {
++        matrix.set(getDrawMatrix());
++    }
++
++    /**
++     * Get the current support matrix
++     */
++    public void getSuppMatrix(Matrix matrix) {
++        matrix.set(mSuppMatrix);
++    }
++
++    private Matrix getDrawMatrix() {
++        mDrawMatrix.set(mBaseMatrix);
++        mDrawMatrix.postConcat(mSuppMatrix);
++        return mDrawMatrix;
++    }
++
++    public Matrix getImageMatrix() {
++        return mDrawMatrix;
++    }
++
++    public void setZoomTransitionDuration(int milliseconds) {
++        this.mZoomDuration = milliseconds;
++    }
++
++    /**
++     * Helper method that 'unpacks' a Matrix and returns the required value
++     *
++     * @param matrix     Matrix to unpack
++     * @param whichValue Which value from Matrix.M* to return
++     * @return returned value
++     */
++    private float getValue(Matrix matrix, int whichValue) {
++        matrix.getValues(mMatrixValues);
++        return mMatrixValues[whichValue];
++    }
++
++    /**
++     * Resets the Matrix back to FIT_CENTER, and then displays its contents
++     */
++    private void resetMatrix() {
++        mSuppMatrix.reset();
++        setRotationBy(mBaseRotation);
++        setImageViewMatrix(getDrawMatrix());
++        checkMatrixBounds();
++    }
++
++    private void setImageViewMatrix(Matrix matrix) {
++        mImageView.setImageMatrix(matrix);
++
++        // Call MatrixChangedListener if needed
++        if (mMatrixChangeListener != null) {
++            RectF displayRect = getDisplayRect(matrix);
++            if (displayRect != null) {
++                mMatrixChangeListener.onMatrixChanged(displayRect);
++            }
++        }
++    }
++
++    /**
++     * Helper method that simply checks the Matrix, and then displays the result
++     */
++    private void checkAndDisplayMatrix() {
++        if (checkMatrixBounds()) {
++            setImageViewMatrix(getDrawMatrix());
++        }
++    }
++
++    /**
++     * Helper method that maps the supplied Matrix to the current Drawable
++     *
++     * @param matrix - Matrix to map Drawable against
++     * @return RectF - Displayed Rectangle
++     */
++    private RectF getDisplayRect(Matrix matrix) {
++        Drawable d = mImageView.getDrawable();
++        if (d != null) {
++            mDisplayRect.set(0, 0, d.getIntrinsicWidth(),
++                    d.getIntrinsicHeight());
++            matrix.mapRect(mDisplayRect);
++            return mDisplayRect;
++        }
++        return null;
++    }
++
++    /**
++     * Calculate Matrix for FIT_CENTER
++     *
++     * @param drawable - Drawable being displayed
++     */
++    private void updateBaseMatrix(Drawable drawable) {
++        if (drawable == null) {
++            return;
++        }
++
++        final float viewWidth = getImageViewWidth(mImageView);
++        final float viewHeight = getImageViewHeight(mImageView);
++        final int drawableWidth = drawable.getIntrinsicWidth();
++        final int drawableHeight = drawable.getIntrinsicHeight();
++
++        mBaseMatrix.reset();
++
++        final float widthScale = viewWidth / drawableWidth;
++        final float heightScale = viewHeight / drawableHeight;
++
++        if (mScaleType == ScaleType.CENTER) {
++            mBaseMatrix.postTranslate((viewWidth - drawableWidth) / 2F,
++                    (viewHeight - drawableHeight) / 2F);
++
++        } else if (mScaleType == ScaleType.CENTER_CROP) {
++            float scale = Math.max(widthScale, heightScale);
++            mBaseMatrix.postScale(scale, scale);
++            mBaseMatrix.postTranslate((viewWidth - drawableWidth * scale) / 2F,
++                    (viewHeight - drawableHeight * scale) / 2F);
++
++        } else if (mScaleType == ScaleType.CENTER_INSIDE) {
++            float scale = Math.min(1.0f, Math.min(widthScale, heightScale));
++            mBaseMatrix.postScale(scale, scale);
++            mBaseMatrix.postTranslate((viewWidth - drawableWidth * scale) / 2F,
++                    (viewHeight - drawableHeight * scale) / 2F);
++
++        } else {
++            RectF mTempSrc = new RectF(0, 0, drawableWidth, drawableHeight);
++            RectF mTempDst = new RectF(0, 0, viewWidth, viewHeight);
++
++            if ((int) mBaseRotation % 180 != 0) {
++                mTempSrc = new RectF(0, 0, drawableHeight, drawableWidth);
++            }
++
++            switch (mScaleType) {
++                case FIT_CENTER:
++                    mBaseMatrix.setRectToRect(mTempSrc, mTempDst, ScaleToFit.CENTER);
++                    break;
++
++                case FIT_START:
++                    mBaseMatrix.setRectToRect(mTempSrc, mTempDst, ScaleToFit.START);
++                    break;
++
++                case FIT_END:
++                    mBaseMatrix.setRectToRect(mTempSrc, mTempDst, ScaleToFit.END);
++                    break;
++
++                case FIT_XY:
++                    mBaseMatrix.setRectToRect(mTempSrc, mTempDst, ScaleToFit.FILL);
++                    break;
++
++                default:
++                    break;
++            }
++        }
++
++        resetMatrix();
++    }
++
++    private boolean checkMatrixBounds() {
++
++        final RectF rect = getDisplayRect(getDrawMatrix());
++        if (rect == null) {
++            return false;
++        }
++
++        final float height = rect.height(), width = rect.width();
++        float deltaX = 0, deltaY = 0;
++
++        final int viewHeight = getImageViewHeight(mImageView);
++        if (height <= viewHeight) {
++            switch (mScaleType) {
++                case FIT_START:
++                    deltaY = -rect.top;
++                    break;
++                case FIT_END:
++                    deltaY = viewHeight - height - rect.top;
++                    break;
++                default:
++                    deltaY = (viewHeight - height) / 2 - rect.top;
++                    break;
++            }
++        } else if (rect.top > 0) {
++            deltaY = -rect.top;
++        } else if (rect.bottom < viewHeight) {
++            deltaY = viewHeight - rect.bottom;
++        }
++
++        final int viewWidth = getImageViewWidth(mImageView);
++        if (width <= viewWidth) {
++            switch (mScaleType) {
++                case FIT_START:
++                    deltaX = -rect.left;
++                    break;
++                case FIT_END:
++                    deltaX = viewWidth - width - rect.left;
++                    break;
++                default:
++                    deltaX = (viewWidth - width) / 2 - rect.left;
++                    break;
++            }
++            mScrollEdge = EDGE_BOTH;
++        } else if (rect.left > 0) {
++            mScrollEdge = EDGE_LEFT;
++            deltaX = -rect.left;
++        } else if (rect.right < viewWidth) {
++            deltaX = viewWidth - rect.right;
++            mScrollEdge = EDGE_RIGHT;
++        } else {
++            mScrollEdge = EDGE_NONE;
++        }
++
++        // Finally actually translate the matrix
++        mSuppMatrix.postTranslate(deltaX, deltaY);
++        return true;
++    }
++
++    private int getImageViewWidth(ImageView imageView) {
++        return imageView.getWidth() - imageView.getPaddingLeft() - imageView.getPaddingRight();
++    }
++
++    private int getImageViewHeight(ImageView imageView) {
++        return imageView.getHeight() - imageView.getPaddingTop() - imageView.getPaddingBottom();
++    }
++
++    private void cancelFling() {
++        if (mCurrentFlingRunnable != null) {
++            mCurrentFlingRunnable.cancelFling();
++            mCurrentFlingRunnable = null;
++        }
++    }
++
++    private class AnimatedZoomRunnable implements Runnable {
++
++        private final float mFocalX, mFocalY;
++        private final long mStartTime;
++        private final float mZoomStart, mZoomEnd;
++
++        public AnimatedZoomRunnable(final float currentZoom, final float targetZoom,
++                                    final float focalX, final float focalY) {
++            mFocalX = focalX;
++            mFocalY = focalY;
++            mStartTime = System.currentTimeMillis();
++            mZoomStart = currentZoom;
++            mZoomEnd = targetZoom;
++        }
++
++        @Override
++        public void run() {
++
++            float t = interpolate();
++            float scale = mZoomStart + t * (mZoomEnd - mZoomStart);
++            float deltaScale = scale / getScale();
++
++            onScale(deltaScale, mFocalX, mFocalY);
++
++            // We haven't hit our target scale yet, so post ourselves again
++            if (t < 1f) {
++                Compat.postOnAnimation(mImageView, this);
++            }
++        }
++
++        private float interpolate() {
++            float t = 1f * (System.currentTimeMillis() - mStartTime) / mZoomDuration;
++            t = Math.min(1f, t);
++            t = mInterpolator.getInterpolation(t);
++            return t;
++        }
++    }
++
++    private class FlingRunnable implements Runnable {
++
++        private final OverScroller mScroller;
++        private int mCurrentX, mCurrentY;
++
++        public FlingRunnable(Context context) {
++            mScroller = new OverScroller(context);
++        }
++
++        public void cancelFling() {
++            mScroller.forceFinished(true);
++        }
++
++        public void fling(int viewWidth, int viewHeight, int velocityX,
++                          int velocityY) {
++            final RectF rect = getDisplayRect();
++            if (rect == null) {
++                return;
++            }
++
++            final int startX = Math.round(-rect.left);
++            final int minX, maxX, minY, maxY;
++
++            if (viewWidth < rect.width()) {
++                minX = 0;
++                maxX = Math.round(rect.width() - viewWidth);
++            } else {
++                minX = maxX = startX;
++            }
++
++            final int startY = Math.round(-rect.top);
++            if (viewHeight < rect.height()) {
++                minY = 0;
++                maxY = Math.round(rect.height() - viewHeight);
++            } else {
++                minY = maxY = startY;
++            }
++
++            mCurrentX = startX;
++            mCurrentY = startY;
++
++            // If we actually can move, fling the scroller
++            if (startX != maxX || startY != maxY) {
++                mScroller.fling(startX, startY, velocityX, velocityY, minX,
++                        maxX, minY, maxY, 0, 0);
++            }
++        }
++
++        @Override
++        public void run() {
++            if (mScroller.isFinished()) {
++                return; // remaining post that should not be handled
++            }
++
++            if (mScroller.computeScrollOffset()) {
++
++                final int newX = mScroller.getCurrX();
++                final int newY = mScroller.getCurrY();
++
++                mSuppMatrix.postTranslate(mCurrentX - newX, mCurrentY - newY);
++                setImageViewMatrix(getDrawMatrix());
++
++                mCurrentX = newX;
++                mCurrentY = newY;
++
++                // Post On animation
++                Compat.postOnAnimation(mImageView, this);
++            }
++        }
++    }
++}
+Index: app/src/test/java/com/example/administrator/maomao_sticker/ExampleUnitTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/test/java/com/example/administrator/maomao_sticker/ExampleUnitTest.java	(revision )
++++ app/src/test/java/com/example/administrator/maomao_sticker/ExampleUnitTest.java	(revision )
+@@ -0,0 +1,17 @@
++package com.example.administrator.maomao_sticker;
++
++import org.junit.Test;
++
++import static org.junit.Assert.*;
++
++/**
++ * Example local unit test, which will execute on the development machine (host).
++ *
++ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
++ */
++public class ExampleUnitTest {
++    @Test
++    public void addition_isCorrect() throws Exception {
++        assertEquals(4, 2 + 2);
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/mao/view/photoview/Util.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/Util.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/Util.java	(revision )
+@@ -0,0 +1,37 @@
++package com.mao.view.photoview;
++
++import android.view.MotionEvent;
++import android.widget.ImageView;
++
++class Util {
++
++    static void checkZoomLevels(float minZoom, float midZoom,
++                                float maxZoom) {
++        if (minZoom >= midZoom) {
++            throw new IllegalArgumentException(
++                    "Minimum zoom has to be less than Medium zoom. Call setMinimumZoom() with a more appropriate value");
++        } else if (midZoom >= maxZoom) {
++            throw new IllegalArgumentException(
++                    "Medium zoom has to be less than Maximum zoom. Call setMaximumZoom() with a more appropriate value");
++        }
++    }
++
++    static boolean hasDrawable(ImageView imageView) {
++        return imageView.getDrawable() != null;
++    }
++
++    static boolean isSupportedScaleType(final ImageView.ScaleType scaleType) {
++        if (scaleType == null) {
++            return false;
++        }
++        switch (scaleType) {
++            case MATRIX:
++                throw new IllegalStateException("Matrix scale type is not supported");
++        }
++        return true;
++    }
++
++    static int getPointerIndex(int action) {
++        return (action & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
++    }
++}
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .gitignore	(revision )
++++ .gitignore	(revision )
+@@ -0,0 +1,9 @@
++*.iml
++.gradle
++/local.properties
++/.idea/workspace.xml
++/.idea/libraries
++.DS_Store
++/build
++/captures
++.externalNativeBuild
+Index: app/src/main/res/values/colors.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/colors.xml	(revision )
++++ app/src/main/res/values/colors.xml	(revision )
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <color name="colorPrimary">#3F51B5</color>
++    <color name="colorPrimaryDark">#303F9F</color>
++    <color name="colorAccent">#FF4081</color>
++</resources>
+Index: app/src/main/res/values/strings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/strings.xml	(revision )
++++ app/src/main/res/values/strings.xml	(revision )
+@@ -0,0 +1,3 @@
++<resources>
++    <string name="app_name">Maomao-sticker</string>
++</resources>
+Index: app/src/main/java/com/mao/view/photoview/OnPhotoTapListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnPhotoTapListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnPhotoTapListener.java	(revision )
+@@ -0,0 +1,22 @@
++package com.mao.view.photoview;
++
++import android.widget.ImageView;
++
++/**
++ * A callback to be invoked when the Photo is tapped with a single
++ * tap.
++ */
++public interface OnPhotoTapListener {
++
++    /**
++     * A callback to receive where the user taps on a photo. You will only receive a callback if
++     * the user taps on the actual photo, tapping on 'whitespace' will be ignored.
++     *
++     * @param view ImageView the user tapped.
++     * @param x    where the user tapped from the of the Drawable, as percentage of the
++     *             Drawable width.
++     * @param y    where the user tapped from the top of the Drawable, as percentage of the
++     *             Drawable height.
++     */
++    void onPhotoTap(ImageView view, float x, float y);
++}
+Index: app/src/main/java/com/mao/view/Stick.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/Stick.java	(revision )
++++ app/src/main/java/com/mao/view/Stick.java	(revision )
+@@ -0,0 +1,33 @@
++package com.mao.view;
++
++import android.content.Context;
++import android.support.annotation.AttrRes;
++import android.support.annotation.NonNull;
++import android.support.annotation.Nullable;
++import android.util.AttributeSet;
++import android.widget.FrameLayout;
++
++/**
++ * Created by Administrator on 2017/4/18.
++ */
++
++public class Stick extends FrameLayout {
++
++
++
++    public Stick(@NonNull Context context) {
++        super(context);
++    }
++
++    public Stick(@NonNull Context context, @Nullable AttributeSet attrs) {
++        super(context, attrs);
++    }
++
++    public Stick(@NonNull Context context, @Nullable AttributeSet attrs, @AttrRes int defStyleAttr) {
++        super(context, attrs, defStyleAttr);
++    }
++
++
++
++
++}
+Index: app/src/main/java/com/mao/view/photoview/Compat.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/Compat.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/Compat.java	(revision )
+@@ -0,0 +1,39 @@
++/*******************************************************************************
++ * Copyright 2011, 2012 Chris Banes.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ * http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ *******************************************************************************/
++package com.mao.view.photoview;
++
++import android.annotation.TargetApi;
++import android.os.Build.VERSION;
++import android.os.Build.VERSION_CODES;
++import android.view.View;
++
++class Compat {
++
++    private static final int SIXTY_FPS_INTERVAL = 1000 / 60;
++
++    public static void postOnAnimation(View view, Runnable runnable) {
++        if (VERSION.SDK_INT >= VERSION_CODES.JELLY_BEAN) {
++            postOnAnimationJellyBean(view, runnable);
++        } else {
++            view.postDelayed(runnable, SIXTY_FPS_INTERVAL);
++        }
++    }
++
++    @TargetApi(16)
++    private static void postOnAnimationJellyBean(View view, Runnable runnable) {
++        view.postOnAnimation(runnable);
++    }
++}
+Index: settings.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- settings.gradle	(revision )
++++ settings.gradle	(revision )
+@@ -0,0 +1,1 @@
++include ':app', ':sticker'
+Index: app/src/main/java/com/mao/view/photoview/OnMatrixChangedListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnMatrixChangedListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnMatrixChangedListener.java	(revision )
+@@ -0,0 +1,18 @@
++package com.mao.view.photoview;
++
++import android.graphics.RectF;
++
++/**
++ * Interface definition for a callback to be invoked when the internal Matrix has changed for
++ * this View.
++ */
++public interface OnMatrixChangedListener {
++
++    /**
++     * Callback for when the Matrix displaying the Drawable has changed. This could be because
++     * the View's bounds have changed, or the user has zoomed.
++     *
++     * @param rect - Rectangle displaying the Drawable's new bounds.
++     */
++    void onMatrixChanged(RectF rect);
++}
+Index: app/src/main/java/com/mao/view/CommodityView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/CommodityView.java	(revision )
++++ app/src/main/java/com/mao/view/CommodityView.java	(revision )
+@@ -0,0 +1,34 @@
++package com.mao.view;
++
++import android.annotation.TargetApi;
++import android.content.Context;
++import android.support.annotation.Nullable;
++import android.util.AttributeSet;
++import android.view.View;
++
++/**
++ * Created by Administrator on 2017/4/19.
++ */
++
++public class CommodityView extends View {
++    public CommodityView(Context context) {
++        super(context);
++    }
++
++    public CommodityView(Context context, @Nullable AttributeSet attrs) {
++        super(context, attrs);
++    }
++
++    public CommodityView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
++        super(context, attrs, defStyleAttr);
++    }
++
++    @TargetApi(21)
++    public CommodityView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
++        super(context, attrs, defStyleAttr, defStyleRes);
++    }
++
++
++
++
++}
+Index: sticker/build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/build.gradle	(revision )
++++ sticker/build.gradle	(revision )
+@@ -0,0 +1,143 @@
++apply plugin: 'com.android.library'
++
++android {
++    compileSdkVersion 25
++    buildToolsVersion "25.0.2"
++
++    defaultConfig {
++        minSdkVersion 9
++        targetSdkVersion 25
++        versionCode 1
++        versionName "1.0"
++
++        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
++
++    }
++    buildTypes {
++        release {
++            minifyEnabled false
++            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
++        }
++    }
++}
++
++dependencies {
++    compile fileTree(dir: 'libs', include: ['*.jar'])
++    compile "com.android.support:appcompat-v7:$rootProject.ext.supportLibraryVersion"
++}
++
++//
++//apply plugin: 'com.android.library'
++//apply plugin: 'com.github.dcendents.android-maven'
++//apply plugin: 'com.jfrog.bintray'
++//
++//version = "1.4.0" // #修改# // 这里是aar的版本号
++//
++//android {
++//  compileSdkVersion 25
++//  buildToolsVersion "25.0.2"
++//  resourcePrefix 'stickerview_'
++//
++//  defaultConfig {
++//    minSdkVersion 9
++//    targetSdkVersion 25
++//    versionCode 1
++//    versionName "1.0"
++//
++//    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
++//  }
++//  buildTypes {
++//    release {
++//      minifyEnabled false
++//      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
++//    }
++//  }
++//
++//  lintOptions {
++//    abortOnError false
++//  }
++//}
++//
++//dependencies {
++//  compile fileTree(dir: 'libs', include: ['*.jar'])
++//  compile "com.android.support:appcompat-v7:$rootProject.ext.supportLibraryVersion"
++//}
++//
++//def siteUrl = 'https://github.com/wuapnjie/StickerView'
++//// #修改# // 项目的主页地址，我这里是我的PickerView项目在github的链接地址
++//def gitUrl = 'https://github.com/wuapnjie/StickerView.git'
++//// #修改# // 项目 git 地址，我这里同样是用Github上的git地址
++//group =
++//    "com.flying.xiaopo" // #修改# // 组名称，这个相当于依赖的时候 compile 'com.bigkoo:pickerview:1.0.1' “:”号前面的前缀
++//
++//install {
++//  repositories.mavenInstaller {
++//    // This generates POM.xml with proper parameters
++//    pom {
++//      project {
++//        packaging 'aar'
++//        name 'Sticker support For Android' // #修改# // 标题
++//        url siteUrl
++//        // Set your license
++//        licenses {
++//          license {
++//            name 'The Apache Software License, Version 2.0'
++//            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
++//          }
++//        }
++//        developers {
++//          developer {
++//            id 'wuapnjie'
++//            // #修改# // 你的userid，昵称
++//            name 'wupanjie' // #修改# // 用户名
++//            email 'wupanjie0611@gmail.com' // #修改# // 邮箱
++//          }
++//        }
++//        scm {
++//          connection gitUrl
++//          developerConnection gitUrl
++//          url siteUrl
++//        }
++//      }
++//    }
++//  }
++//}
++//
++//task sourcesJar(type: Jar) {
++//  from android.sourceSets.main.java.srcDirs
++//  classifier = 'sources'
++//}
++//
++//task javadoc(type: Javadoc) {
++//  source = android.sourceSets.main.java.srcDirs
++//  classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
++//}
++//
++//task javadocJar(type: Jar, dependsOn: javadoc) {
++//  classifier = 'javadoc'
++//  from javadoc.destinationDir
++//}
++//
++//artifacts {
++//  archives javadocJar
++//  archives sourcesJar
++//}
++//
++//Properties properties = new Properties()
++//properties.load(project.rootProject.file('local.properties').newDataInputStream())
++//bintray {
++//  user = properties.getProperty("bintray.user")
++//  key = properties.getProperty("bintray.apikey")
++//  // 上面两个 user和key 需要留意一下，在local.properites 里面配置的
++//  configurations = ['archives']
++//  pkg {
++//    repo = "maven"
++//    name = "stickerview"
++//    // #修改# //  在 jcenter 上面的项目名字
++//    websiteUrl = siteUrl
++//    vcsUrl = gitUrl
++//    licenses = ["Apache-2.0"]
++//    publish = true
++//  }
++//}
++
+Index: sticker/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/AndroidManifest.xml	(revision )
++++ sticker/src/main/AndroidManifest.xml	(revision )
+@@ -0,0 +1,9 @@
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.xiaopo.flying.sticker">
++
++    <application android:allowBackup="true" android:label="@string/app_name"
++        android:supportsRtl="true">
++
++    </application>
++
++</manifest>
+Index: .idea/vcs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/vcs.xml	(revision )
++++ .idea/vcs.xml	(revision )
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="VcsDirectoryMappings">
++    <mapping directory="" vcs="Git" />
++  </component>
++</project>
+\ No newline at end of file
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/Sticker.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/Sticker.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/Sticker.java	(revision )
+@@ -0,0 +1,169 @@
++package com.xiaopo.flying.sticker;
++
++import android.graphics.Canvas;
++import android.graphics.Matrix;
++import android.graphics.PointF;
++import android.graphics.RectF;
++import android.graphics.drawable.Drawable;
++import android.support.annotation.IntRange;
++import android.support.annotation.NonNull;
++
++/**
++ * @author wupanjie
++ */
++public abstract class Sticker {
++  protected static final String TAG = "Sticker";
++
++  protected Matrix matrix;
++  protected boolean isFlippedHorizontally;
++  protected boolean isFlippedVertically;
++  private float[] matrixValues = new float[9];
++
++  public boolean isFlippedHorizontally() {
++    return isFlippedHorizontally;
++  }
++
++  public void setFlippedHorizontally(boolean flippedHorizontally) {
++    isFlippedHorizontally = flippedHorizontally;
++  }
++
++  public boolean isFlippedVertically() {
++    return isFlippedVertically;
++  }
++
++  public void setFlippedVertically(boolean flippedVertically) {
++    isFlippedVertically = flippedVertically;
++  }
++
++  public Matrix getMatrix() {
++    return matrix;
++  }
++
++  public void setMatrix(Matrix matrix) {
++    this.matrix.set(matrix);
++  }
++
++  public abstract void draw(Canvas canvas);
++
++  public abstract int getWidth();
++
++  public abstract int getHeight();
++
++  public abstract void setDrawable(Drawable drawable);
++
++  public abstract Drawable getDrawable();
++
++  public abstract void setAlpha(int alpha);
++
++  public float[] getBoundPoints() {
++    if (!isFlippedHorizontally) {
++      if (!isFlippedVertically) {
++        return new float[] {
++            0f, 0f, getWidth(), 0f, 0f, getHeight(), getWidth(), getHeight()
++        };
++      } else {
++        return new float[] {
++            0f, getHeight(), getWidth(), getHeight(), 0f, 0f, getWidth(), 0f
++        };
++      }
++    } else {
++      if (!isFlippedVertically) {
++        return new float[] {
++            getWidth(), 0f, 0f, 0f, getWidth(), getHeight(), 0f, getHeight()
++        };
++      }else {
++        return new float[] {
++            getWidth(), getHeight(), 0f, getHeight(), getWidth(), 0f, 0f, 0f
++        };
++      }
++    }
++  }
++
++  public float[] getMappedBoundPoints() {
++    float[] dst = new float[8];
++    matrix.mapPoints(dst, getBoundPoints());
++    return dst;
++  }
++
++  public float[] getMappedPoints(float[] src) {
++    float[] dst = new float[src.length];
++    matrix.mapPoints(dst, src);
++    return dst;
++  }
++
++  public RectF getBound() {
++    return new RectF(0, 0, getWidth(), getHeight());
++  }
++
++  public RectF getMappedBound() {
++    RectF dst = new RectF();
++    matrix.mapRect(dst, getBound());
++    return dst;
++  }
++
++  public PointF getCenterPoint() {
++    return new PointF(getWidth() / 2, getHeight() / 2);
++  }
++
++  public PointF getMappedCenterPoint() {
++    PointF pointF = getCenterPoint();
++    float[] dst = getMappedPoints(new float[] {
++        pointF.x, pointF.y
++    });
++    return new PointF(dst[0], dst[1]);
++  }
++
++  public float getCurrentScale() {
++    return getMatrixScale(matrix);
++  }
++
++  public float getCurrentHeight() {
++    return getMatrixScale(matrix) * getHeight();
++  }
++
++  public float getCurrentWidth() {
++    return getMatrixScale(matrix) * getWidth();
++  }
++
++  /**
++   * This method calculates scale value for given Matrix object.
++   */
++  private float getMatrixScale(@NonNull Matrix matrix) {
++    return (float) Math.sqrt(Math.pow(getMatrixValue(matrix, Matrix.MSCALE_X), 2) + Math.pow(
++        getMatrixValue(matrix, Matrix.MSKEW_Y), 2));
++  }
++
++  /**
++   * @return - current image rotation angle.
++   */
++  public float getCurrentAngle() {
++    return getMatrixAngle(matrix);
++  }
++
++  /**
++   * This method calculates rotation angle for given Matrix object.
++   */
++  private float getMatrixAngle(@NonNull Matrix matrix) {
++    return (float) -(Math.atan2(getMatrixValue(matrix, Matrix.MSKEW_X),
++        getMatrixValue(matrix, Matrix.MSCALE_X)) * (180 / Math.PI));
++  }
++
++  private float getMatrixValue(@NonNull Matrix matrix, @IntRange(from = 0, to = 9) int valueIndex) {
++    matrix.getValues(matrixValues);
++    return matrixValues[valueIndex];
++  }
++
++  public boolean contains(float x, float y) {
++    Matrix tempMatrix = new Matrix();
++    tempMatrix.setRotate(-getCurrentAngle());
++    float[] unrotatedWrapperCorner = new float[8];
++    float[] unrotatedPoint = new float[2];
++    tempMatrix.mapPoints(unrotatedWrapperCorner, getMappedBoundPoints());
++    tempMatrix.mapPoints(unrotatedPoint, new float[] { x, y });
++    return StickerUtils.trapToRect(unrotatedWrapperCorner)
++        .contains(unrotatedPoint[0], unrotatedPoint[1]);
++  }
++
++  public void release() {
++  }
++}
+Index: build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- build.gradle	(revision )
++++ build.gradle	(revision )
+@@ -0,0 +1,27 @@
++// Top-level build file where you can add configuration options common to all sub-projects/modules.
++
++buildscript {
++    repositories {
++        jcenter()
++    }
++    dependencies {
++        classpath 'com.android.tools.build:gradle:2.3.1'
++    }
++        // NOTE: Do not place your application dependencies here; they belong
++        // in the individual module build.gradle files
++    }
++
++
++allprojects {
++    repositories {
++        jcenter()
++    }
++}
++
++task clean(type: Delete) {
++    delete rootProject.buildDir
++}
++
++ext {
++    supportLibraryVersion = '25.1.1'
++}
+\ No newline at end of file
+Index: app/build.gradle
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/build.gradle	(revision )
++++ app/build.gradle	(revision )
+@@ -0,0 +1,31 @@
++apply plugin: 'com.android.application'
++
++android {
++    compileSdkVersion 25
++    buildToolsVersion "25.0.2"
++    defaultConfig {
++        applicationId "com.example.administrator.maomao_sticker"
++        minSdkVersion 15
++        targetSdkVersion 25
++        versionCode 1
++        versionName "1.0"
++        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
++    }
++    buildTypes {
++        release {
++            minifyEnabled false
++            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
++        }
++    }
++}
++
++dependencies {
++    compile fileTree(include: ['*.jar'], dir: 'libs')
++    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
++        exclude group: 'com.android.support', module: 'support-annotations'
++    })
++    compile 'com.android.support:appcompat-v7:25.3.1'
++    testCompile 'junit:junit:4.12'
++    compile 'com.android.support:support-core-utils:25.3.0'
++    compile project(':sticker')
++}
+Index: .idea/compiler.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/compiler.xml	(revision )
++++ .idea/compiler.xml	(revision )
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="CompilerConfiguration">
++    <resourceExtensions />
++    <wildcardResourcePatterns>
++      <entry name="!?*.java" />
++      <entry name="!?*.form" />
++      <entry name="!?*.class" />
++      <entry name="!?*.groovy" />
++      <entry name="!?*.scala" />
++      <entry name="!?*.flex" />
++      <entry name="!?*.kt" />
++      <entry name="!?*.clj" />
++      <entry name="!?*.aj" />
++    </wildcardResourcePatterns>
++    <annotationProcessing>
++      <profile default="true" name="Default" enabled="false">
++        <processorPath useClasspath="true" />
++      </profile>
++    </annotationProcessing>
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/mao/activity/Main.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/activity/Main.java	(revision )
++++ app/src/main/java/com/mao/activity/Main.java	(revision )
+@@ -0,0 +1,52 @@
++package com.mao.activity;
++
++import android.app.Activity;
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.graphics.drawable.BitmapDrawable;
++import android.graphics.drawable.Drawable;
++import android.os.Bundle;
++import android.os.PersistableBundle;
++import android.support.annotation.Nullable;
++import android.support.v7.app.AppCompatActivity;
++import android.util.Log;
++import android.view.View;
++
++import com.example.administrator.maomao_sticker.R;
++import com.mao.view.MyView;
++import com.mao.view.PhotoCropView;
++
++/**
++ * Created by Administrator on 2017/4/18.
++ */
++
++public class Main extends Activity implements PhotoCropView.onLocationListener {
++
++    private String Tag = "maomao";
++
++    private MyView myView;
++
++
++    @Override
++    protected void onCreate(@Nullable Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.main);
++//        Drawable drawable = this.getResources().getDrawable(R.mipmap.ic_launcher);
++        myView = (MyView) findViewById(R.id.myview);
++        myView.addSticker("我编辑的内容");
++
++    }
++
++    public void add_sticker(View view){
++        myView.addSticker("添加一个");
++    }
++
++
++    @Override
++    public void locationRect(int startX, int startY, int endX, int endY) {
++        String a="sx="+startX+"ex="+endX+"sy="+startY+"ey="+endY;
++        Log.d(Tag , a);
++    }
++
++
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/StickerIconEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/StickerIconEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/StickerIconEvent.java	(revision )
+@@ -0,0 +1,15 @@
++package com.xiaopo.flying.sticker;
++
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++
++public interface StickerIconEvent {
++  void onActionDown(StickerView stickerView,MotionEvent event);
++
++  void onActionMove(StickerView stickerView,MotionEvent event);
++
++  void onActionUp(StickerView stickerView,MotionEvent event);
++}
+Index: app/src/main/res/layout/myview_root.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/myview_root.xml	(revision )
++++ app/src/main/res/layout/myview_root.xml	(revision )
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<FrameLayout
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:app="http://schemas.android.com/apk/res-auto"
++    android:orientation="vertical"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    app:img="@mipmap/ic_launcher_round"
++>
++
++    <com.mao.view.photoview.PhotoView
++        android:id="@+id/myview_photoview"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent" />
++    <com.xiaopo.flying.sticker.StickerView
++        android:id="@+id/myview_stickerview"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        app:showIcons="true"
++        app:showBorder="true">
++
++    </com.xiaopo.flying.sticker.StickerView>
++
++</FrameLayout>
+\ No newline at end of file
+Index: .idea/runConfigurations.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/runConfigurations.xml	(revision )
++++ .idea/runConfigurations.xml	(revision )
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="RunConfigurationProducerService">
++    <option name="ignoredProducers">
++      <set>
++        <option value="org.jetbrains.plugins.gradle.execution.test.runner.AllInPackageGradleConfigurationProducer" />
++        <option value="org.jetbrains.plugins.gradle.execution.test.runner.TestClassGradleConfigurationProducer" />
++        <option value="org.jetbrains.plugins.gradle.execution.test.runner.TestMethodGradleConfigurationProducer" />
++      </set>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: sticker/src/main/res/values/attrs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/res/values/attrs.xml	(revision )
++++ sticker/src/main/res/values/attrs.xml	(revision )
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <declare-styleable name="StickerView">
++        <attr name="showIcons" format="boolean" />
++        <attr name="showBorder" format="boolean" />
++        <attr name="bringToFrontCurrentSticker" format="boolean" />
++    </declare-styleable>
++</resources>
+\ No newline at end of file
+Index: sticker/src/main/res/values/strings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/res/values/strings.xml	(revision )
++++ sticker/src/main/res/values/strings.xml	(revision )
+@@ -0,0 +1,3 @@
++<resources>
++    <string name="app_name">Sticker</string>
++</resources>
+Index: app/src/main/java/com/mao/view/PhotoCropView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/PhotoCropView.java	(revision )
++++ app/src/main/java/com/mao/view/PhotoCropView.java	(revision )
+@@ -0,0 +1,329 @@
++package com.mao.view;
++import android.content.Context;
++import android.graphics.Bitmap;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.Paint;
++import android.graphics.PorterDuff;
++import android.graphics.PorterDuffXfermode;
++import android.util.AttributeSet;
++import android.view.MotionEvent;
++import android.view.View;
++import android.view.WindowManager;
++
++
++
++
++/**
++ * Created by Farble on 2015/3/10.
++ */
++public class PhotoCropView extends View {
++    private static final String TAG = "PhotoCropView";
++
++    private onLocationListener locationListener;/*listen to the Rect */
++    private onChangeLocationlistener changeLocationlistener;/*listening position changed */
++
++    private int MODE;
++    private static final int MODE_OUTSIDE = 0x000000aa;/*170*/
++    private static final int MODE_INSIDE = 0x000000bb;/*187*/
++    private static final int MODE_POINT = 0X000000cc;/*204*/
++    private static final int MODE_ILLEGAL = 0X000000dd;/*221*/
++
++    private static final int minWidth = 100;/*the minimum width of the rectangle*/
++    private static final int minHeight = 200;/*the minimum height of the rectangle*/
++
++    private static final int START_X = 200;
++    private static final int START_Y = 200;
++
++    private static final float EDGE_WIDTH = 1.8f;
++    private static final int ACCURACY= 15;/*touch accuracy*/
++
++    private int pointPosition;/*vertex of a rectangle*/
++
++    private int sX;/*start X location*/
++    private int sY;/*start Y location*/
++    private int eX;/*end X location*/
++    private int eY;/*end Y location*/
++
++    private int pressX;/*X coordinate values while finger press*/
++    private int pressY;/*Y coordinate values while finger press*/
++
++    private int memonyX;/*the last time the coordinate values of X*/
++    private int memonyY;/*the last time the coordinate values of Y*/
++
++    private int coverWidth = 300;/*width of selection box*/
++    private int coverHeight = 400;/*height of selection box*/
++
++    private Paint mPaint;
++    private Paint mPaintLine;
++    private Bitmap mBitmapCover;
++    private Bitmap mBitmapRectBlack;
++    private PorterDuffXfermode xfermode;/*paint mode*/
++
++    public PhotoCropView(Context context) {
++        super(context);
++        init();
++    }
++
++    public PhotoCropView(Context context, AttributeSet attrs) {
++        super(context, attrs);
++        init();
++    }
++
++    public PhotoCropView(Context context, AttributeSet attrs, int defStyleAttr) {
++        super(context, attrs, defStyleAttr);
++        init();
++    }
++
++    @SuppressWarnings("deprecation")
++    private void init() {
++        sX = START_X;
++        sY = START_Y;
++        WindowManager manager = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
++        int width = manager.getDefaultDisplay().getWidth();
++        int height = manager.getDefaultDisplay().getHeight();
++        mBitmapCover = makeBitmap(width, height, 0x5A000000, 0, 0);
++        mBitmapRectBlack = makeBitmap(coverWidth, coverHeight, 0xff000000, coverWidth, coverHeight);
++
++        eX = sX + coverWidth;
++        eY = sY + coverHeight;
++        pressX = 0;
++        pressY = 0;
++
++        xfermode = new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
++
++        mPaint = new Paint();
++        mPaint.setAntiAlias(true);
++
++        mPaintLine = new Paint();
++        mPaintLine.setColor(Color.WHITE);
++        mPaintLine.setStrokeWidth(2.0f);
++    }
++
++    /*生成bitmap*/
++    private Bitmap makeBitmap(int mwidth, int mheight, int resource, int staX, int staY) {
++        Bitmap bm = Bitmap.createBitmap(mwidth, mheight, Bitmap.Config.ARGB_8888);
++        Canvas c = new Canvas(bm);
++        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
++
++        p.setColor(resource);
++        c.drawRect(staX, staY, mwidth, mheight, p);
++        return bm;
++    }
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        super.onDraw(canvas);
++        mPaint.setFilterBitmap(false);
++        int sc = canvas.saveLayer(0, 0, canvas.getWidth(), canvas.getHeight(), null,
++                Canvas.MATRIX_SAVE_FLAG |
++                        Canvas.CLIP_SAVE_FLAG |
++                        Canvas.HAS_ALPHA_LAYER_SAVE_FLAG |
++                        Canvas.FULL_COLOR_LAYER_SAVE_FLAG |
++                        Canvas.CLIP_TO_LAYER_SAVE_FLAG);
++
++        canvas.drawBitmap(mBitmapCover, 0, 0, mPaint);
++        mPaint.setXfermode(xfermode);
++        canvas.drawBitmap(mBitmapRectBlack, sX, sY, mPaint);
++        if (locationListener != null) {
++            locationListener.locationRect(sX, sY, eX, eY);
++        }
++        mPaint.setXfermode(null);
++        canvas.restoreToCount(sc);
++        canvas.drawLine((float) sX - EDGE_WIDTH, (float) sY - EDGE_WIDTH, (float) eX + EDGE_WIDTH, (float) sY - EDGE_WIDTH, mPaintLine);/*up -*/
++        canvas.drawLine((float) sX - EDGE_WIDTH, (float) eY + EDGE_WIDTH, (float) eX + EDGE_WIDTH, (float) eY + EDGE_WIDTH, mPaintLine);/*down -*/
++        canvas.drawLine((float) sX - EDGE_WIDTH, (float) sY - EDGE_WIDTH, (float) sX - EDGE_WIDTH, (float) eY + EDGE_WIDTH, mPaintLine);/*left |*/
++        canvas.drawLine((float) eX + EDGE_WIDTH, (float) sY - EDGE_WIDTH, (float) eX + EDGE_WIDTH, (float) eY + EDGE_WIDTH, mPaintLine);/*righ |*/
++
++    }
++
++    @SuppressWarnings("NullableProblems")
++    @Override
++    public boolean onTouchEvent(MotionEvent event) {
++        switch (event.getAction()) {
++            case MotionEvent.ACTION_DOWN:
++                if (changeLocationlistener != null) {
++                    changeLocationlistener.locationChange("change self");
++                } else {
++                    changeLocationlistener = null;
++                }
++
++                memonyX = (int) event.getX();
++                memonyY = (int) event.getY();
++                checkMode(memonyX, memonyY);
++                break;
++            case MotionEvent.ACTION_MOVE: {
++                switch (MODE) {
++                    case MODE_ILLEGAL:
++                        pressX = (int) event.getX();
++                        pressY = (int) event.getY();
++                        recoverFromIllegal(pressX, pressY);
++                        postInvalidate();
++                        break;
++                    case MODE_OUTSIDE:
++                        //do nothing;
++                        break;
++                    case MODE_INSIDE:
++                        pressX = (int) event.getX();
++                        pressY = (int) event.getY();
++                        moveByTouch(pressX, pressY);
++                        postInvalidate();
++                        break;
++                    default:
++                        /*MODE_POINT*/
++                        pressX = (int) event.getX();
++                        pressY = (int) event.getY();
++                        mPaintLine.setColor(Color.YELLOW);
++                        moveByPoint(pressX, pressY);
++                        postInvalidate();
++                        break;
++                }
++            }
++            break;
++            case MotionEvent.ACTION_UP:
++                mPaintLine.setColor(Color.WHITE);
++                postInvalidate();
++                break;
++            default:
++                break;
++        }
++        return true;
++    }
++
++    /*从非法状态恢复，这里处理的是达到最小值后能拉伸放大*/
++    private void recoverFromIllegal(int rx, int ry) {
++        if ((rx > sX && ry > sY) && (rx < eX && ry < eY)) {
++            MODE = MODE_ILLEGAL;
++        } else {
++            MODE = MODE_POINT;
++        }
++    }
++
++    private void checkMode(int cx, int cy) {
++        if (cx > sX && cx < eX && cy > sY && cy < eY) {
++            MODE = MODE_INSIDE;
++        } else if (nearbyPoint(cx, cy) < 4) {
++            MODE = MODE_POINT;
++        } else {
++            MODE = MODE_OUTSIDE;
++        }
++    }
++
++    /*判断点(inX,inY)是否靠近矩形的4个顶点*/
++    private int nearbyPoint(int inX, int inY) {
++        if ((Math.abs(sX - inX) <= ACCURACY && (Math.abs(inY - sY) <= ACCURACY))) {/*left-up angle*/
++            pointPosition = 0;
++            return 0;
++        }
++        if ((Math.abs(eX - inX) <= ACCURACY && (Math.abs(inY - sY) <= ACCURACY))) {/*right-up  angle*/
++            pointPosition = 1;
++            return 1;
++        }
++        if ((Math.abs(sX - inX) <= ACCURACY && (Math.abs(inY - eY) <= ACCURACY))) {/*left-down angle*/
++            pointPosition = 2;
++            return 2;
++        }
++        if ((Math.abs(eX - inX) <= ACCURACY && (Math.abs(inY - eY) <= ACCURACY))) {/*right-down angle*/
++            pointPosition = 3;
++            return 3;
++        }
++        pointPosition = 100;
++        return 100;
++    }
++
++    /*刷新矩形的坐标*/
++    private void refreshLocation(int isx, int isy, int iex, int iey) {
++        this.sX = isx;
++        this.sY = isy;
++        this.eX = iex;
++        this.eY = iey;
++    }
++
++    /*矩形随手指移动*/
++    private void moveByTouch(int mx, int my) {/*move center point*/
++        int dX = mx - memonyX;
++        int dY = my - memonyY;
++
++        sX += dX;
++        sY += dY;
++
++        eX = sX + coverWidth;
++        eY = sY + coverHeight;
++
++        memonyX = mx;
++        memonyY = my;
++
++    }
++
++    /*检测矩形是否达到最小值*/
++    private boolean checkLegalRect(int cHeight, int cWidth) {
++        return (cHeight > minHeight && cWidth > minWidth);
++    }
++
++    /*点击顶点附近时的缩放处理*/
++    @SuppressWarnings("SuspiciousNameCombination")
++    private void moveByPoint(int bx, int by) {
++        switch (pointPosition) {
++            case 0:/*left-up*/
++                coverWidth = Math.abs(eX - bx);
++                coverHeight = Math.abs(eY - by);
++                //noinspection SuspiciousNameCombination
++                if (!checkLegalRect(coverWidth, coverHeight)) {
++                    MODE = MODE_ILLEGAL;
++                } else {
++                    mBitmapRectBlack = null;
++                    mBitmapRectBlack = makeBitmap(coverWidth, coverHeight, 0xff000000, coverWidth, coverHeight);
++                    refreshLocation(bx, by, eX, eY);
++                }
++                break;
++            case 1:/*right-up*/
++                coverWidth = Math.abs(bx - sX);
++                coverHeight = Math.abs(eY - by);
++                if (!checkLegalRect(coverWidth, coverHeight)) {
++                    MODE = MODE_ILLEGAL;
++                } else {
++                    mBitmapRectBlack = null;
++                    mBitmapRectBlack = makeBitmap(coverWidth, coverHeight, 0xff000000, coverWidth, coverHeight);
++                    refreshLocation(sX, by, bx, eY);
++                }
++                break;
++            case 2:/*left-down*/
++                coverWidth = Math.abs(eX - bx);
++                coverHeight = Math.abs(by - sY);
++                if (!checkLegalRect(coverWidth, coverHeight)) {
++                    MODE = MODE_ILLEGAL;
++                } else {
++                    mBitmapRectBlack = null;
++                    mBitmapRectBlack = makeBitmap(coverWidth, coverHeight, 0xff000000, coverWidth, coverHeight);
++                    refreshLocation(bx, sY, eX, by);
++                }
++                break;
++            case 3:/*right-down*/
++                coverWidth = Math.abs(bx - sX);
++                coverHeight = Math.abs(by - sY);
++                if (!checkLegalRect(coverWidth, coverHeight)) {
++                    MODE = MODE_ILLEGAL;
++                } else {
++                    mBitmapRectBlack = null;
++                    mBitmapRectBlack = makeBitmap(coverWidth, coverHeight, 0xff000000, coverWidth, coverHeight);
++                    refreshLocation(sX, sY, bx, by);
++                }
++                break;
++            default:
++                break;
++        }
++    }
++
++    public void setLocationListener(onLocationListener locationListener) {
++        this.locationListener = locationListener;
++    }
++
++    public interface onLocationListener {
++        public void locationRect(int startX, int startY, int endX, int endY);
++    }
++
++    public interface onChangeLocationlistener {
++        @SuppressWarnings("SameParameterValue")
++        public void locationChange(String msg);
++    }
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/TextSticker.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/TextSticker.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/TextSticker.java	(revision )
+@@ -0,0 +1,304 @@
++package com.xiaopo.flying.sticker;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Matrix;
++import android.graphics.Rect;
++import android.graphics.Typeface;
++import android.graphics.drawable.Drawable;
++import android.support.v4.content.ContextCompat;
++import android.text.Layout;
++import android.text.StaticLayout;
++import android.text.TextPaint;
++import android.util.TypedValue;
++
++/**
++ * Customize your sticker with text and image background.
++ * You can place some text into a given region, however,
++ * you can also add a plain text sticker. To support text
++ * auto resizing , I take most of the code from AutoResizeTextView.
++ * See https://adilatwork.blogspot.com/2014/08/android-textview-which-resizes-its-text.html
++ * Notice: It's not efficient to add long text due to too much of
++ * StaticLayout object allocation.
++ * <p>
++ * Created by liutao on 30/11/2016.
++ */
++
++public class TextSticker extends Sticker {
++
++  /**
++   * Our ellipsis string.
++   */
++  private static final String mEllipsis = "\u2026";
++
++  /**
++   * Upper bounds for text size.
++   * This acts as a starting point for resizing.
++   */
++  private float mMaxTextSizePixels;
++
++  /**
++   * Lower bounds for text size.
++   */
++  private float mMinTextSizePixels;
++
++  /**
++   * Line spacing multiplier.
++   */
++  private float mLineSpacingMultiplier = 1.0f;
++
++  /**
++   * Additional line spacing.
++   */
++  private float mLineSpacingExtra = 0.0f;
++
++  private Context mContext;
++  private Drawable mDrawable;
++  private Rect mRealBounds;
++  private Rect mTextRect;
++  private StaticLayout mStaticLayout;
++  private TextPaint mTextPaint;
++  private Layout.Alignment mAlignment;
++  private String mText;
++
++  public TextSticker(Context context) {
++    this(context, null);
++  }
++
++  public TextSticker(Context context, Drawable drawable) {
++    mContext = context;
++    mDrawable = drawable;
++    if (drawable == null) {
++      mDrawable = ContextCompat.getDrawable(context, R.drawable.sticker_transparent_background);
++    }
++    matrix = new Matrix();
++    mTextPaint = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
++    mRealBounds = new Rect(0, 0, getWidth(), getHeight());
++    mTextRect = new Rect(0, 0, getWidth(), getHeight());
++    mMinTextSizePixels = convertSpToPx(6);
++    mMaxTextSizePixels = convertSpToPx(32);
++    mAlignment = Layout.Alignment.ALIGN_CENTER;
++    mTextPaint.setTextSize(mMaxTextSizePixels);
++  }
++
++  @Override public void draw(Canvas canvas) {
++    canvas.save();
++    canvas.concat(matrix);
++    if (mDrawable != null) {
++      mDrawable.setBounds(mRealBounds);
++      mDrawable.draw(canvas);
++    }
++    canvas.restore();
++
++    canvas.save();
++    canvas.concat(matrix);
++    if (mTextRect.width() == getWidth()) {
++      int dy = getHeight() / 2 - mStaticLayout.getHeight() / 2;
++      // center vertical
++      canvas.translate(0, dy);
++    } else {
++      int dx = mTextRect.left;
++      int dy = mTextRect.top + mTextRect.height() / 2 - mStaticLayout.getHeight() / 2;
++      canvas.translate(dx, dy);
++    }
++    mStaticLayout.draw(canvas);
++    canvas.restore();
++  }
++
++  @Override public int getWidth() {
++    return mDrawable.getIntrinsicWidth();
++  }
++
++  @Override public int getHeight() {
++    return mDrawable.getIntrinsicHeight();
++  }
++
++  @Override public void release() {
++    super.release();
++    if (mDrawable != null) {
++      mDrawable = null;
++    }
++  }
++
++  @Override
++  public void setAlpha(int alpha) {
++    mTextPaint.setAlpha(alpha);
++  }
++
++  @Override public Drawable getDrawable() {
++    return mDrawable;
++  }
++
++  @Override public void setDrawable(Drawable drawable) {
++    mDrawable = drawable;
++    mRealBounds.set(0, 0, getWidth(), getHeight());
++    mTextRect.set(0, 0, getWidth(), getHeight());
++  }
++
++  public void setDrawable(Drawable drawable, Rect region) {
++    mDrawable = drawable;
++    mRealBounds.set(0, 0, getWidth(), getHeight());
++    if (region == null) {
++      mTextRect.set(0, 0, getWidth(), getHeight());
++    } else {
++      mTextRect.set(region.left, region.top, region.right, region.bottom);
++    }
++  }
++
++  public void setTypeface(Typeface typeface) {
++    mTextPaint.setTypeface(typeface);
++  }
++
++  public void setTextColor(int color) {
++    mTextPaint.setColor(color);
++  }
++
++  public void setTextAlign(Layout.Alignment alignment) {
++    mAlignment = alignment;
++  }
++
++  public void setMaxTextSize(float size) {
++    setMaxTextSize(TypedValue.COMPLEX_UNIT_SP, size);
++  }
++
++  public void setMaxTextSize(int unit, float size) {
++    mTextPaint.setTextSize(convertSpToPx(size));
++    mMaxTextSizePixels = mTextPaint.getTextSize();
++  }
++
++  /**
++   * Sets the lower text size limit
++   *
++   * @param minTextSizeScaledPixels the minimum size to use for text in this view,
++   * in scaled pixels.
++   */
++  public void setMinTextSize(float minTextSizeScaledPixels) {
++    mMinTextSizePixels = convertSpToPx(minTextSizeScaledPixels);
++  }
++
++  public void setLineSpacing(float add, float multiplier) {
++    mLineSpacingMultiplier = multiplier;
++    mLineSpacingExtra = add;
++  }
++
++  public void setText(String text) {
++    mText = text;
++  }
++
++  public String getText() {
++    return mText;
++  }
++
++  /**
++   * Resize this view's text size with respect to its width and height
++   * (minus padding). You should always call this method after the initialization.
++   */
++  public void resizeText() {
++    final int availableHeightPixels = mTextRect.height();
++
++    final int availableWidthPixels = mTextRect.width();
++
++    final CharSequence text = getText();
++
++    // Safety check
++    // (Do not resize if the view does not have dimensions or if there is no text)
++    if (text == null
++        || text.length() <= 0
++        || availableHeightPixels <= 0
++        || availableWidthPixels <= 0
++        || mMaxTextSizePixels <= 0) {
++      return;
++    }
++
++    float targetTextSizePixels = mMaxTextSizePixels;
++    int targetTextHeightPixels =
++        getTextHeightPixels(text, availableWidthPixels, targetTextSizePixels);
++
++    // Until we either fit within our TextView
++    // or we have reached our minimum text size,
++    // incrementally try smaller sizes
++    while (targetTextHeightPixels > availableHeightPixels
++        && targetTextSizePixels > mMinTextSizePixels) {
++      targetTextSizePixels = Math.max(targetTextSizePixels - 2, mMinTextSizePixels);
++
++      targetTextHeightPixels =
++          getTextHeightPixels(text, availableWidthPixels, targetTextSizePixels);
++    }
++
++    // If we have reached our minimum text size and the text still doesn't fit,
++    // append an ellipsis
++    // (NOTE: Auto-ellipsize doesn't work hence why we have to do it here)
++    if (targetTextSizePixels == mMinTextSizePixels
++        && targetTextHeightPixels > availableHeightPixels) {
++      // Make a copy of the original TextPaint object for measuring
++      TextPaint textPaintCopy = new TextPaint(mTextPaint);
++      textPaintCopy.setTextSize(targetTextSizePixels);
++
++      // Measure using a StaticLayout instance
++      StaticLayout staticLayout =
++          new StaticLayout(text, textPaintCopy, availableWidthPixels, Layout.Alignment.ALIGN_NORMAL,
++              mLineSpacingMultiplier, mLineSpacingExtra, false);
++
++      // Check that we have a least one line of rendered text
++      if (staticLayout.getLineCount() > 0) {
++        // Since the line at the specific vertical position would be cut off,
++        // we must trim up to the previous line and add an ellipsis
++        int lastLine = staticLayout.getLineForVertical(availableHeightPixels) - 1;
++
++        if (lastLine >= 0) {
++          int startOffset = staticLayout.getLineStart(lastLine);
++          int endOffset = staticLayout.getLineEnd(lastLine);
++          float lineWidthPixels = staticLayout.getLineWidth(lastLine);
++          float ellipseWidth = textPaintCopy.measureText(mEllipsis);
++
++          // Trim characters off until we have enough room to draw the ellipsis
++          while (availableWidthPixels < lineWidthPixels + ellipseWidth) {
++            endOffset--;
++            lineWidthPixels =
++                textPaintCopy.measureText(text.subSequence(startOffset, endOffset + 1).toString());
++          }
++
++          setText(text.subSequence(0, endOffset) + mEllipsis);
++        }
++      }
++    }
++    mTextPaint.setTextSize(targetTextSizePixels);
++    mStaticLayout =
++        new StaticLayout(mText, mTextPaint, mTextRect.width(), mAlignment, mLineSpacingMultiplier,
++            mLineSpacingExtra, true);
++  }
++
++  /**
++   * @return lower text size limit, in pixels.
++   */
++  public float getMinTextSizePixels() {
++    return mMinTextSizePixels;
++  }
++
++  /**
++   * Sets the text size of a clone of the view's {@link TextPaint} object
++   * and uses a {@link StaticLayout} instance to measure the height of the text.
++   *
++   * @return the height of the text when placed in a view
++   * with the specified width
++   * and when the text has the specified size.
++   */
++  private int getTextHeightPixels(CharSequence source, int availableWidthPixels,
++      float textSizePixels) {
++    mTextPaint.setTextSize(textSizePixels);
++    // It's not efficient to create a StaticLayout instance
++    // every time when measuring, we can use StaticLayout.Builder
++    // since api 23.
++    StaticLayout staticLayout =
++        new StaticLayout(source, mTextPaint, availableWidthPixels, Layout.Alignment.ALIGN_NORMAL,
++            mLineSpacingMultiplier, mLineSpacingExtra, true);
++    return staticLayout.getHeight();
++  }
++
++  /**
++   * @return the number of pixels which scaledPixels corresponds to on the device.
++   */
++  private float convertSpToPx(float scaledPixels) {
++    return scaledPixels * mContext.getResources().getDisplayMetrics().scaledDensity;
++  }
++}
+Index: app/proguard-rules.pro
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/proguard-rules.pro	(revision )
++++ app/proguard-rules.pro	(revision )
+@@ -0,0 +1,25 @@
++# Add project specific ProGuard rules here.
++# By default, the flags in this file are appended to flags specified
++# in E:\tool\sdk/tools/proguard/proguard-android.txt
++# You can edit the include path and order by changing the proguardFiles
++# directive in build.gradle.
++#
++# For more details, see
++#   http://developer.android.com/guide/developing/tools/proguard.html
++
++# Add any project specific keep options here:
++
++# If your project uses WebView with JS, uncomment the following
++# and specify the fully qualified class name to the JavaScript interface
++# class:
++#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
++#   public *;
++#}
++
++# Uncomment this to preserve the line number information for
++# debugging stack traces.
++#-keepattributes SourceFile,LineNumberTable
++
++# If you keep the line number information, uncomment this to
++# hide the original source file name.
++#-renamesourcefileattribute SourceFile
+Index: app/src/main/java/com/mao/view/photoview/PhotoView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/PhotoView.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/PhotoView.java	(revision )
+@@ -0,0 +1,234 @@
++/*******************************************************************************
++ * Copyright 2011, 2012 Chris Banes.
++ * <p>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p>
++ * http://www.apache.org/licenses/LICENSE-2.0
++ * <p>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ *******************************************************************************/
++package com.mao.view.photoview;
++
++import android.annotation.TargetApi;
++import android.content.Context;
++import android.graphics.Matrix;
++import android.graphics.RectF;
++import android.graphics.drawable.Drawable;
++import android.net.Uri;
++import android.util.AttributeSet;
++import android.view.GestureDetector;
++import android.widget.ImageView;
++
++/**
++ * A zoomable {@link ImageView}. See {@link PhotoViewAttacher} for most of the details on how the zooming
++ * is accomplished
++ */
++public class PhotoView extends ImageView {
++
++    private PhotoViewAttacher attacher;
++
++    public PhotoView(Context context) {
++        this(context, null);
++    }
++
++    public PhotoView(Context context, AttributeSet attr) {
++        this(context, attr, 0);
++    }
++
++    public PhotoView(Context context, AttributeSet attr, int defStyle) {
++        super(context, attr, defStyle);
++        init();
++    }
++
++    @TargetApi(21)
++    public PhotoView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
++        super(context, attrs, defStyleAttr, defStyleRes);
++        init();
++    }
++
++    private void init() {
++        attacher = new PhotoViewAttacher(this);
++        //We always pose as a Matrix scale type, though we can change to another scale type
++        //via the attacher
++        super.setScaleType(ScaleType.MATRIX);
++    }
++
++    /**
++     * Get the current {@link PhotoViewAttacher} for this view. Be wary of holding on to references
++     * to this attacher, as it has a reference to this view, which, if a reference is held in the
++     * wrong place, can cause memory leaks.
++     *
++     * @return the attacher.
++     */
++    public PhotoViewAttacher getAttacher() {
++        return attacher;
++    }
++
++    @Override
++    public ScaleType getScaleType() {
++        return attacher.getScaleType();
++    }
++
++    @Override
++    public Matrix getImageMatrix() {
++        return attacher.getImageMatrix();
++    }
++
++    @Override
++    public void setOnLongClickListener(OnLongClickListener l) {
++        attacher.setOnLongClickListener(l);
++    }
++
++    @Override
++    public void setOnClickListener(OnClickListener l) {
++        attacher.setOnClickListener(l);
++    }
++
++    @Override
++    public void setScaleType(ScaleType scaleType) {
++        attacher.setScaleType(scaleType);
++    }
++
++    @Override
++    public void setImageDrawable(Drawable drawable) {
++        super.setImageDrawable(drawable);
++        // setImageBitmap calls through to this method
++        attacher.update();
++    }
++
++    @Override
++    public void setImageResource(int resId) {
++        super.setImageResource(resId);
++        attacher.update();
++    }
++
++    @Override
++    public void setImageURI(Uri uri) {
++        super.setImageURI(uri);
++        attacher.update();
++    }
++
++    @Override
++    protected boolean setFrame(int l, int t, int r, int b) {
++        boolean changed = super.setFrame(l, t, r, b);
++        if (changed) {
++            attacher.update();
++        }
++        return changed;
++    }
++
++    public void setRotationTo(float rotationDegree) {
++        attacher.setRotationTo(rotationDegree);
++    }
++
++    public void setRotationBy(float rotationDegree) {
++        attacher.setRotationBy(rotationDegree);
++    }
++
++    @Deprecated
++    public boolean isZoomEnabled() {
++        return attacher.isZoomEnabled();
++    }
++
++    public boolean isZoomable() {
++        return attacher.isZoomable();
++    }
++
++    public void setZoomable(boolean zoomable) {
++        attacher.setZoomable(zoomable);
++    }
++
++    public RectF getDisplayRect() {
++        return attacher.getDisplayRect();
++    }
++
++    public void getDisplayMatrix(Matrix matrix) {
++        attacher.getDisplayMatrix(matrix);
++    }
++
++    public boolean setDisplayMatrix(Matrix finalRectangle) {
++        return attacher.setDisplayMatrix(finalRectangle);
++    }
++
++    public float getMinimumScale() {
++        return attacher.getMinimumScale();
++    }
++
++    public float getMediumScale() {
++        return attacher.getMediumScale();
++    }
++
++    public float getMaximumScale() {
++        return attacher.getMaximumScale();
++    }
++
++    public float getScale() {
++        return attacher.getScale();
++    }
++
++    public void setAllowParentInterceptOnEdge(boolean allow) {
++        attacher.setAllowParentInterceptOnEdge(allow);
++    }
++
++    public void setMinimumScale(float minimumScale) {
++        attacher.setMinimumScale(minimumScale);
++    }
++
++    public void setMediumScale(float mediumScale) {
++        attacher.setMediumScale(mediumScale);
++    }
++
++    public void setMaximumScale(float maximumScale) {
++        attacher.setMaximumScale(maximumScale);
++    }
++
++    public void setScaleLevels(float minimumScale, float mediumScale, float maximumScale) {
++        attacher.setScaleLevels(minimumScale, mediumScale, maximumScale);
++    }
++
++    public void setOnMatrixChangeListener(OnMatrixChangedListener listener) {
++        attacher.setOnMatrixChangeListener(listener);
++    }
++
++    public void setOnPhotoTapListener(OnPhotoTapListener listener) {
++        attacher.setOnPhotoTapListener(listener);
++    }
++
++    public void setOnOutsidePhotoTapListener(OnOutsidePhotoTapListener listener) {
++        attacher.setOnOutsidePhotoTapListener(listener);
++    }
++
++    public void setScale(float scale) {
++        attacher.setScale(scale);
++    }
++
++    public void setScale(float scale, boolean animate) {
++        attacher.setScale(scale, animate);
++    }
++
++    public void setScale(float scale, float focalX, float focalY, boolean animate) {
++        attacher.setScale(scale, focalX, focalY, animate);
++    }
++
++    public void setZoomTransitionDuration(int milliseconds) {
++        attacher.setZoomTransitionDuration(milliseconds);
++    }
++
++    public void setOnDoubleTapListener(GestureDetector.OnDoubleTapListener onDoubleTapListener) {
++        attacher.setOnDoubleTapListener(onDoubleTapListener);
++    }
++
++    public void setOnScaleChangeListener(OnScaleChangedListener onScaleChangedListener) {
++        attacher.setOnScaleChangeListener(onScaleChangedListener);
++    }
++
++    public void setOnSingleFlingListener(OnSingleFlingListener onSingleFlingListener) {
++        attacher.setOnSingleFlingListener(onSingleFlingListener);
++    }
++}
+Index: app/src/main/java/com/mao/view/photoview/CustomGestureDetector.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/CustomGestureDetector.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/CustomGestureDetector.java	(revision )
+@@ -0,0 +1,203 @@
++/*******************************************************************************
++ * Copyright 2011, 2012 Chris Banes.
++ * <p/>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p/>
++ * http://www.apache.org/licenses/LICENSE-2.0
++ * <p/>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ *******************************************************************************/
++package com.mao.view.photoview;
++
++import android.content.Context;
++import android.view.MotionEvent;
++import android.view.ScaleGestureDetector;
++import android.view.VelocityTracker;
++import android.view.ViewConfiguration;
++
++/**
++ * Does a whole lot of gesture detecting.
++ */
++class CustomGestureDetector {
++
++    private static final int INVALID_POINTER_ID = -1;
++
++    private int mActivePointerId = INVALID_POINTER_ID;
++    private int mActivePointerIndex = 0;
++    private final ScaleGestureDetector mDetector;
++
++    private VelocityTracker mVelocityTracker;
++    private boolean mIsDragging;
++    private float mLastTouchX;
++    private float mLastTouchY;
++    private final float mTouchSlop;
++    private final float mMinimumVelocity;
++    private OnGestureListener mListener;
++
++    CustomGestureDetector(Context context, OnGestureListener listener) {
++        final ViewConfiguration configuration = ViewConfiguration
++                .get(context);
++        mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
++        mTouchSlop = configuration.getScaledTouchSlop();
++
++        mListener = listener;
++        ScaleGestureDetector.OnScaleGestureListener mScaleListener = new ScaleGestureDetector.OnScaleGestureListener() {
++
++            @Override
++            public boolean onScale(ScaleGestureDetector detector) {
++                float scaleFactor = detector.getScaleFactor();
++
++                if (Float.isNaN(scaleFactor) || Float.isInfinite(scaleFactor))
++                    return false;
++
++                mListener.onScale(scaleFactor,
++                        detector.getFocusX(), detector.getFocusY());
++                return true;
++            }
++
++            @Override
++            public boolean onScaleBegin(ScaleGestureDetector detector) {
++                return true;
++            }
++
++            @Override
++            public void onScaleEnd(ScaleGestureDetector detector) {
++                // NO-OP
++            }
++        };
++        mDetector = new ScaleGestureDetector(context, mScaleListener);
++    }
++
++    private float getActiveX(MotionEvent ev) {
++        try {
++            return ev.getX(mActivePointerIndex);
++        } catch (Exception e) {
++            return ev.getX();
++        }
++    }
++
++    private float getActiveY(MotionEvent ev) {
++        try {
++            return ev.getY(mActivePointerIndex);
++        } catch (Exception e) {
++            return ev.getY();
++        }
++    }
++
++    public boolean isScaling() {
++        return mDetector.isInProgress();
++    }
++
++    public boolean isDragging() {
++        return mIsDragging;
++    }
++
++    public boolean onTouchEvent(MotionEvent ev) {
++        try {
++            mDetector.onTouchEvent(ev);
++            return processTouchEvent(ev);
++        } catch (IllegalArgumentException e) {
++            // Fix for support lib bug, happening when onDestroy is called
++            return true;
++        }
++    }
++
++    private boolean processTouchEvent(MotionEvent ev) {
++        final int action = ev.getAction();
++        switch (action & MotionEvent.ACTION_MASK) {
++            case MotionEvent.ACTION_DOWN:
++                mActivePointerId = ev.getPointerId(0);
++
++                mVelocityTracker = VelocityTracker.obtain();
++                if (null != mVelocityTracker) {
++                    mVelocityTracker.addMovement(ev);
++                }
++
++                mLastTouchX = getActiveX(ev);
++                mLastTouchY = getActiveY(ev);
++                mIsDragging = false;
++                break;
++            case MotionEvent.ACTION_MOVE:
++                final float x = getActiveX(ev);
++                final float y = getActiveY(ev);
++                final float dx = x - mLastTouchX, dy = y - mLastTouchY;
++
++                if (!mIsDragging) {
++                    // Use Pythagoras to see if drag length is larger than
++                    // touch slop
++                    mIsDragging = Math.sqrt((dx * dx) + (dy * dy)) >= mTouchSlop;
++                }
++
++                if (mIsDragging) {
++                    mListener.onDrag(dx, dy);
++                    mLastTouchX = x;
++                    mLastTouchY = y;
++
++                    if (null != mVelocityTracker) {
++                        mVelocityTracker.addMovement(ev);
++                    }
++                }
++                break;
++            case MotionEvent.ACTION_CANCEL:
++                mActivePointerId = INVALID_POINTER_ID;
++                // Recycle Velocity Tracker
++                if (null != mVelocityTracker) {
++                    mVelocityTracker.recycle();
++                    mVelocityTracker = null;
++                }
++                break;
++            case MotionEvent.ACTION_UP:
++                mActivePointerId = INVALID_POINTER_ID;
++                if (mIsDragging) {
++                    if (null != mVelocityTracker) {
++                        mLastTouchX = getActiveX(ev);
++                        mLastTouchY = getActiveY(ev);
++
++                        // Compute velocity within the last 1000ms
++                        mVelocityTracker.addMovement(ev);
++                        mVelocityTracker.computeCurrentVelocity(1000);
++
++                        final float vX = mVelocityTracker.getXVelocity(), vY = mVelocityTracker
++                                .getYVelocity();
++
++                        // If the velocity is greater than minVelocity, call
++                        // listener
++                        if (Math.max(Math.abs(vX), Math.abs(vY)) >= mMinimumVelocity) {
++                            mListener.onFling(mLastTouchX, mLastTouchY, -vX,
++                                    -vY);
++                        }
++                    }
++                }
++
++                // Recycle Velocity Tracker
++                if (null != mVelocityTracker) {
++                    mVelocityTracker.recycle();
++                    mVelocityTracker = null;
++                }
++                break;
++            case MotionEvent.ACTION_POINTER_UP:
++                final int pointerIndex = Util.getPointerIndex(ev.getAction());
++                final int pointerId = ev.getPointerId(pointerIndex);
++                if (pointerId == mActivePointerId) {
++                    // This was our active pointer going up. Choose a new
++                    // active pointer and adjust accordingly.
++                    final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
++                    mActivePointerId = ev.getPointerId(newPointerIndex);
++                    mLastTouchX = ev.getX(newPointerIndex);
++                    mLastTouchY = ev.getY(newPointerIndex);
++                }
++                break;
++        }
++
++        mActivePointerIndex = ev
++                .findPointerIndex(mActivePointerId != INVALID_POINTER_ID ? mActivePointerId
++                        : 0);
++        return true;
++    }
++}
+Index: gradlew.bat
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- gradlew.bat	(revision )
++++ gradlew.bat	(revision )
+@@ -0,0 +1,90 @@
++@if "%DEBUG%" == "" @echo off
++@rem ##########################################################################
++@rem
++@rem  Gradle startup script for Windows
++@rem
++@rem ##########################################################################
++
++@rem Set local scope for the variables with windows NT shell
++if "%OS%"=="Windows_NT" setlocal
++
++@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
++set DEFAULT_JVM_OPTS=
++
++set DIRNAME=%~dp0
++if "%DIRNAME%" == "" set DIRNAME=.
++set APP_BASE_NAME=%~n0
++set APP_HOME=%DIRNAME%
++
++@rem Find java.exe
++if defined JAVA_HOME goto findJavaFromJavaHome
++
++set JAVA_EXE=java.exe
++%JAVA_EXE% -version >NUL 2>&1
++if "%ERRORLEVEL%" == "0" goto init
++
++echo.
++echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
++echo.
++echo Please set the JAVA_HOME variable in your environment to match the
++echo location of your Java installation.
++
++goto fail
++
++:findJavaFromJavaHome
++set JAVA_HOME=%JAVA_HOME:"=%
++set JAVA_EXE=%JAVA_HOME%/bin/java.exe
++
++if exist "%JAVA_EXE%" goto init
++
++echo.
++echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
++echo.
++echo Please set the JAVA_HOME variable in your environment to match the
++echo location of your Java installation.
++
++goto fail
++
++:init
++@rem Get command-line arguments, handling Windowz variants
++
++if not "%OS%" == "Windows_NT" goto win9xME_args
++if "%@eval[2+2]" == "4" goto 4NT_args
++
++:win9xME_args
++@rem Slurp the command line arguments.
++set CMD_LINE_ARGS=
++set _SKIP=2
++
++:win9xME_args_slurp
++if "x%~1" == "x" goto execute
++
++set CMD_LINE_ARGS=%*
++goto execute
++
++:4NT_args
++@rem Get arguments from the 4NT Shell from JP Software
++set CMD_LINE_ARGS=%$
++
++:execute
++@rem Setup the command line
++
++set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
++
++@rem Execute Gradle
++"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
++
++:end
++@rem End local scope for the variables with windows NT shell
++if "%ERRORLEVEL%"=="0" goto mainEnd
++
++:fail
++rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
++rem the _cmd.exe /c_ return code!
++if  not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
++exit /b 1
++
++:mainEnd
++if "%OS%"=="Windows_NT" endlocal
++
++:omega
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/AndroidManifest.xml	(revision )
++++ app/src/main/AndroidManifest.xml	(revision )
+@@ -0,0 +1,22 @@
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++          
++    package="com.example.administrator.maomao_sticker"
++    >
++
++    <application android:allowBackup="true"
++        android:label="@string/app_name"
++        android:icon="@mipmap/ic_launcher"
++        android:roundIcon="@mipmap/ic_launcher_round"
++        android:supportsRtl="true"
++        android:theme="@style/AppTheme">
++
++        <activity android:name="com.mao.activity.Main">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN"></action>
++                <category android:name="android.intent.category.LAUNCHER"></category>
++            </intent-filter>
++        </activity>
++
++    </application>
++
++</manifest>
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/FlipVerticallyEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/FlipVerticallyEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/FlipVerticallyEvent.java	(revision )
+@@ -0,0 +1,21 @@
++package com.xiaopo.flying.sticker;
++
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++
++public class FlipVerticallyEvent implements StickerIconEvent {
++  @Override public void onActionDown(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionMove(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionUp(StickerView stickerView, MotionEvent event) {
++    stickerView.flipCurrentSticker(StickerView.FLIP_VERTICALLY);
++  }
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/ZoomIconEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/ZoomIconEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/ZoomIconEvent.java	(revision )
+@@ -0,0 +1,24 @@
++package com.xiaopo.flying.sticker;
++
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++
++public class ZoomIconEvent implements StickerIconEvent {
++  @Override public void onActionDown(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionMove(StickerView stickerView, MotionEvent event) {
++    stickerView.zoomAndRotateCurrentSticker(event);
++  }
++
++  @Override public void onActionUp(StickerView stickerView, MotionEvent event) {
++    if (stickerView.getOnStickerOperationListener() != null) {
++      stickerView.getOnStickerOperationListener()
++          .onStickerZoomFinished(stickerView.getCurrentSticker());
++    }
++  }
++}
+Index: sticker/proguard-rules.pro
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/proguard-rules.pro	(revision )
++++ sticker/proguard-rules.pro	(revision )
+@@ -0,0 +1,17 @@
++# Add project specific ProGuard rules here.
++# By default, the flags in this file are appended to flags specified
++# in /usr/local/android-sdk-linux/tools/proguard/proguard-android.txt
++# You can edit the include path and order by changing the proguardFiles
++# directive in build.gradle.
++#
++# For more details, see
++#   http://developer.android.com/guide/developing/tools/proguard.html
++
++# Add any project specific keep options here:
++
++# If your project uses WebView with JS, uncomment the following
++# and specify the fully qualified class name to the JavaScript interface
++# class:
++#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
++#   public *;
++#}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/FlipHorizontallyEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/FlipHorizontallyEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/FlipHorizontallyEvent.java	(revision )
+@@ -0,0 +1,21 @@
++package com.xiaopo.flying.sticker;
++
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++
++public class FlipHorizontallyEvent implements StickerIconEvent {
++  @Override public void onActionDown(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionMove(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionUp(StickerView stickerView, MotionEvent event) {
++    stickerView.flipCurrentSticker(StickerView.FLIP_HORIZONTALLY);
++  }
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/NonIconEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/NonIconEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/NonIconEvent.java	(revision )
+@@ -0,0 +1,25 @@
++package com.xiaopo.flying.sticker;
++
++import android.util.Log;
++import android.view.MotionEvent;
++
++/**
++ * Created by Administrator on 2017/4/20.
++ */
++
++public class NonIconEvent implements StickerIconEvent {
++    @Override
++    public void onActionDown(StickerView stickerView, MotionEvent event) {
++
++    }
++
++    @Override
++    public void onActionMove(StickerView stickerView, MotionEvent event) {
++
++    }
++
++    @Override
++    public void onActionUp(StickerView stickerView, MotionEvent event) {
++        Log.d("maomao","It do nothing");
++    }
++}
+Index: sticker/src/main/res/drawable/sticker_transparent_background.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/res/drawable/sticker_transparent_background.xml	(revision )
++++ sticker/src/main/res/drawable/sticker_transparent_background.xml	(revision )
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="@android:color/transparent" />
++    <size android:width="200dp" android:height="50dp" />
++</shape>
+\ No newline at end of file
+Index: .idea/modules.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/modules.xml	(revision )
++++ .idea/modules.xml	(revision )
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ProjectModuleManager">
++    <modules>
++      <module fileurl="file://$PROJECT_DIR$/Maomao-sticker.iml" filepath="$PROJECT_DIR$/Maomao-sticker.iml" />
++      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
++      <module fileurl="file://$PROJECT_DIR$/sticker/sticker.iml" filepath="$PROJECT_DIR$/sticker/sticker.iml" />
++    </modules>
++  </component>
++</project>
+\ No newline at end of file
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/DeleteIconEvent.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/DeleteIconEvent.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/DeleteIconEvent.java	(revision )
+@@ -0,0 +1,22 @@
++package com.xiaopo.flying.sticker;
++
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++
++public class DeleteIconEvent implements StickerIconEvent {
++  @Override public void onActionDown(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionMove(StickerView stickerView, MotionEvent event) {
++
++  }
++
++  @Override public void onActionUp(StickerView stickerView, MotionEvent event) {
++    stickerView.removeCurrentSticker();
++
++  }
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/StickerUtils.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/StickerUtils.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/StickerUtils.java	(revision )
+@@ -0,0 +1,73 @@
++package com.xiaopo.flying.sticker;
++
++import android.content.Context;
++import android.content.Intent;
++import android.graphics.Bitmap;
++import android.graphics.RectF;
++import android.net.Uri;
++import android.provider.MediaStore;
++import android.util.Log;
++
++import java.io.File;
++import java.io.FileNotFoundException;
++import java.io.FileOutputStream;
++import java.io.IOException;
++
++import static java.lang.Math.round;
++
++/**
++ * @author wupanjie
++ */
++class StickerUtils {
++  private static final String TAG = "StickerView";
++
++  public static String saveImageToGallery(File file, Bitmap bmp) {
++    if (bmp == null) {
++      Log.e(TAG, "saveImageToGallery: the bitmap is null");
++      return "";
++    }
++    try {
++      FileOutputStream fos = new FileOutputStream(file);
++      bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
++      fos.flush();
++      fos.close();
++    } catch (IOException e) {
++      e.printStackTrace();
++    }
++
++    Log.e(TAG, "saveImageToGallery: the path of bmp is " + file.getAbsolutePath());
++    return file.getAbsolutePath();
++  }
++
++  // 把文件插入到系统图库
++  public static void notifySystemGallery(Context context, File file) {
++    if (file == null || !file.exists()) {
++      Log.e(TAG, "notifySystemGallery: the file do not exist.");
++      return;
++    }
++
++    try {
++      MediaStore.Images.Media.insertImage(context.getContentResolver(), file.getAbsolutePath(),
++          file.getName(), null);
++    } catch (FileNotFoundException e) {
++      e.printStackTrace();
++    }
++    // 最后通知图库更新
++    context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
++  }
++
++  public static RectF trapToRect(float[] array) {
++    RectF r = new RectF(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY,
++        Float.NEGATIVE_INFINITY);
++    for (int i = 1; i < array.length; i += 2) {
++      float x = round(array[i - 1] * 10) / 10.f;
++      float y = round(array[i] * 10) / 10.f;
++      r.left = (x < r.left) ? x : r.left;
++      r.top = (y < r.top) ? y : r.top;
++      r.right = (x > r.right) ? x : r.right;
++      r.bottom = (y > r.bottom) ? y : r.bottom;
++    }
++    r.sort();
++    return r;
++  }
++}
+Index: app/src/main/java/com/mao/view/MyView.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/MyView.java	(revision )
++++ app/src/main/java/com/mao/view/MyView.java	(revision )
+@@ -0,0 +1,197 @@
++package com.mao.view;
++
++import android.content.Context;
++import android.content.res.TypedArray;
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.graphics.Canvas;
++import android.graphics.drawable.BitmapDrawable;
++import android.graphics.drawable.Drawable;
++import android.support.v4.content.ContextCompat;
++import android.util.AttributeSet;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.widget.FrameLayout;
++import android.widget.ImageView;
++
++import com.example.administrator.maomao_sticker.R;
++import com.mao.view.photoview.PhotoView;
++import com.xiaopo.flying.sticker.BitmapStickerIcon;
++import com.xiaopo.flying.sticker.DeleteIconEvent;
++import com.xiaopo.flying.sticker.NonIconEvent;
++import com.xiaopo.flying.sticker.StickerView;
++import com.xiaopo.flying.sticker.TextSticker;
++import com.xiaopo.flying.sticker.ZoomIconEvent;
++
++import java.util.Arrays;
++
++/**
++ * Created  on 2017/4/17.
++ * @author maojinhui
++ *
++ */
++
++public class MyView extends FrameLayout {
++
++    /**背景图片*/
++    private PhotoView photoView;
++    /***/
++    private StickerView stickerView;
++
++    /**
++     *
++     * @param context
++     */
++    public MyView(Context context, Bitmap bitmap) {
++        super(context);
++        init(context,bitmap);
++    }
++
++    public MyView(Context context, AttributeSet attrs) {
++        super(context,attrs);
++        BitmapDrawable id = (BitmapDrawable) getAttrs(context, attrs);
++        Bitmap bitmap = id.getBitmap();
++        init(context,bitmap);
++
++
++    }
++
++    public MyView(Context context, AttributeSet attrs, int defStyleAttr) {
++        super(context, attrs, defStyleAttr);
++        BitmapDrawable id = (BitmapDrawable) getAttrs(context, attrs);
++        Bitmap bitmap = id.getBitmap();
++        init(context,bitmap);
++    }
++
++    /**
++     * 得到属性值
++     *
++     * @param context
++     * @param attrs
++     */
++    private  Drawable getAttrs(Context context, AttributeSet attrs) {
++        TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.MyView);
++        Drawable attr1 = ta.getDrawable(R.styleable.MyView_img);
++        ta.recycle();
++        return  attr1;
++    }
++
++
++    /**
++     * 初始化基础类
++     * @param context
++     * @param bitmap 传入一张图片
++     */
++    private void  init(Context context,Bitmap bitmap){
++        LayoutInflater.from(context).inflate(R.layout.myview_root,this);
++        photoView = (PhotoView) findViewById(R.id.myview_photoview);
++//        photoView.setScaleType(ImageView.ScaleType.MATRIX);
++        photoView.setImageBitmap(bitmap);
++//        addView(photoView);
++
++        stickerView= (StickerView) findViewById(R.id.myview_stickerview);
++        BitmapStickerIcon deleteIcon = new BitmapStickerIcon(ContextCompat.getDrawable(context,
++                com.xiaopo.flying.sticker.R.drawable.sticker_ic_flip_white_18dp),
++                BitmapStickerIcon.LEFT_TOP);
++        deleteIcon.setIconEvent(new NonIconEvent());
++
++        BitmapStickerIcon zoomIcon = new BitmapStickerIcon(ContextCompat.getDrawable(context,
++                com.xiaopo.flying.sticker.R.drawable.sticker_ic_scale_white_18dp),
++                BitmapStickerIcon.RIGHT_BOTOM);
++        zoomIcon.setIconEvent(new ZoomIconEvent());
++
++        BitmapStickerIcon flipIcon = new BitmapStickerIcon(ContextCompat.getDrawable(context,
++                com.xiaopo.flying.sticker.R.drawable.sticker_ic_close_white_18dp),
++                BitmapStickerIcon.RIGHT_TOP);
++        flipIcon.setIconEvent(new DeleteIconEvent());
++
++        BitmapStickerIcon heartIcon =
++                new BitmapStickerIcon(ContextCompat.getDrawable(context, R.drawable.sticker_ic_close_white_18dp),
++                        BitmapStickerIcon.LEFT_BOTTOM);
++        heartIcon.setIconEvent(new NonIconEvent());
++        stickerView.setIcons(Arrays.asList(deleteIcon, zoomIcon, flipIcon, heartIcon));
++
++    }
++
++
++    protected void onMeasure( int widthMeasureSpec, int heightMeasureSpec) {
++        // 计算出所有的childView的宽和高
++        measureChildren(widthMeasureSpec, heightMeasureSpec);
++        //测量并保存layout的宽高(使用getDefaultSize时，wrap_content和match_perent都是填充屏幕)
++        //稍后会重新写这个方法，能达到wrap_content的效果
++        setMeasuredDimension( getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec),
++                getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec));
++    }
++
++    /**
++     * 为所有的子控件摆放位置.
++     */
++    @Override
++    protected void onLayout( boolean changed, int left, int top, int right, int bottom) {
++        final int count = getChildCount();
++        int childMeasureWidth = 0;
++        int childMeasureHeight = 0;
++        int layoutWidth = 0;    // 容器已经占据的宽度
++        int layoutHeight = 0;   // 容器已经占据的宽度
++        int maxChildHeight = 0; //一行中子控件最高的高度，用于决定下一行高度应该在目前基础上累加多少
++        for(int i = 0; i<count; i++){
++            View child = getChildAt(i);
++            //注意此处不能使用getWidth和getHeight，这两个方法必须在onLayout执行完，才能正确获取宽高
++            childMeasureWidth = child.getMeasuredWidth();
++            childMeasureHeight = child.getMeasuredHeight();
++            if(layoutWidth<getWidth()){
++                //如果一行没有排满，继续往右排列
++                left = layoutWidth;
++                right = left+childMeasureWidth;
++                top = layoutHeight;
++                bottom = top+childMeasureHeight;
++            } else{
++                //排满后换行
++                layoutWidth = 0;
++                layoutHeight += maxChildHeight;
++                maxChildHeight = 0;
++
++                left = layoutWidth;
++                right = left+childMeasureWidth;
++                top = layoutHeight;
++                bottom = top+childMeasureHeight;
++            }
++
++            layoutWidth += childMeasureWidth;  //宽度累加
++            if(childMeasureHeight>maxChildHeight){
++                maxChildHeight = childMeasureHeight;
++            }
++
++            //确定子控件的位置，四个参数分别代表（左上右下）点的坐标值
++            child.layout(left, top, right, bottom);
++        }
++    }
++
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        super.onDraw(canvas);
++
++    }
++
++
++    /**
++     * 添加stickerview
++     * @param text
++     */
++    public void addSticker(String text){
++        Drawable drawable =
++                ContextCompat.getDrawable(getContext(), R.drawable.sticker_transparent_background);
++        final TextSticker textSticker = new TextSticker(getContext());
++        textSticker.setDrawable(drawable);
++        textSticker.setText(text);
++        textSticker.setMaxTextSize(14);
++        textSticker.resizeText();
++        stickerView.addSticker(textSticker);
++    }
++
++
++
++
++
++}
+Index: app/src/main/res/layout/main.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/main.xml	(revision )
++++ app/src/main/res/layout/main.xml	(revision )
+@@ -0,0 +1,30 @@
++<?xml version="1.0" encoding="utf-8"?>
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:myview="http://schemas.android.com/apk/res-auto"
++    xmlns:tools="http://schemas.android.com/tools"
++    android:orientation="vertical" android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    tools:context="com.mao.activity.Main"
++    >
++
++    <!--<ImageView-->
++        <!--android:layout_width="match_parent"-->
++        <!--android:layout_height="match_parent"-->
++        <!--android:src="@mipmap/ic_launcher_round"-->
++        <!--/>-->
++    <com.mao.view.MyView
++        android:id="@+id/myview"
++        myview:img="@mipmap/ic_launcher_round"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        >
++    </com.mao.view.MyView>
++
++    <Button
++        android:text="添加一个"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:onClick="add_sticker"
++        />
++
++</FrameLayout>
+\ No newline at end of file
+Index: app/.gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/.gitignore	(revision )
++++ app/.gitignore	(revision )
+@@ -0,0 +1,1 @@
++/build
+Index: .idea/copyright/profiles_settings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/copyright/profiles_settings.xml	(revision )
++++ .idea/copyright/profiles_settings.xml	(revision )
+@@ -0,0 +1,3 @@
++<component name="CopyrightManager">
++  <settings default="" />
++</component>
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/misc.xml	(revision )
++++ .idea/misc.xml	(revision )
+@@ -0,0 +1,46 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="EntryPointsManager">
++    <entry_points version="2.0" />
++  </component>
++  <component name="NullableNotNullManager">
++    <option name="myDefaultNullable" value="android.support.annotation.Nullable" />
++    <option name="myDefaultNotNull" value="android.support.annotation.NonNull" />
++    <option name="myNullables">
++      <value>
++        <list size="4">
++          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
++          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nullable" />
++          <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.Nullable" />
++          <item index="3" class="java.lang.String" itemvalue="android.support.annotation.Nullable" />
++        </list>
++      </value>
++    </option>
++    <option name="myNotNulls">
++      <value>
++        <list size="4">
++          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
++          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
++          <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
++          <item index="3" class="java.lang.String" itemvalue="android.support.annotation.NonNull" />
++        </list>
++      </value>
++    </option>
++  </component>
++  <component name="ProjectLevelVcsManager" settingsEditedManually="false">
++    <OptionsSetting value="true" id="Add" />
++    <OptionsSetting value="true" id="Remove" />
++    <OptionsSetting value="true" id="Checkout" />
++    <OptionsSetting value="true" id="Update" />
++    <OptionsSetting value="true" id="Status" />
++    <OptionsSetting value="true" id="Edit" />
++    <ConfirmationsSetting value="0" id="Add" />
++    <ConfirmationsSetting value="0" id="Remove" />
++  </component>
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_7" default="true" assert-keyword="true" jdk-15="true" project-jdk-name="JDK" project-jdk-type="JavaSDK">
++    <output url="file://$PROJECT_DIR$/build/classes" />
++  </component>
++  <component name="ProjectType">
++    <option name="id" value="Android" />
++  </component>
++</project>
+\ No newline at end of file
+Index: gradle/wrapper/gradle-wrapper.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>GBK
+===================================================================
+--- gradle/wrapper/gradle-wrapper.properties	(revision )
++++ gradle/wrapper/gradle-wrapper.properties	(revision )
+@@ -0,0 +1,6 @@
++#Mon Apr 17 20:20:28 CST 2017
++distributionBase=GRADLE_USER_HOME
++distributionPath=wrapper/dists
++zipStoreBase=GRADLE_USER_HOME
++zipStorePath=wrapper/dists
++distributionUrl=https\://services.gradle.org/distributions/gradle-3.3-all.zip
+Index: app/src/androidTest/java/com/example/administrator/maomao_sticker/ExampleInstrumentedTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/androidTest/java/com/example/administrator/maomao_sticker/ExampleInstrumentedTest.java	(revision )
++++ app/src/androidTest/java/com/example/administrator/maomao_sticker/ExampleInstrumentedTest.java	(revision )
+@@ -0,0 +1,26 @@
++package com.example.administrator.maomao_sticker;
++
++import android.content.Context;
++import android.support.test.InstrumentationRegistry;
++import android.support.test.runner.AndroidJUnit4;
++
++import org.junit.Test;
++import org.junit.runner.RunWith;
++
++import static org.junit.Assert.*;
++
++/**
++ * Instrumentation test, which will execute on an Android device.
++ *
++ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
++ */
++@RunWith(AndroidJUnit4.class)
++public class ExampleInstrumentedTest {
++    @Test
++    public void useAppContext() throws Exception {
++        // Context of the app under test.
++        Context appContext = InstrumentationRegistry.getTargetContext();
++
++        assertEquals("com.example.administrator.maomao_sticker", appContext.getPackageName());
++    }
++}
+Index: gradlew
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- gradlew	(revision )
++++ gradlew	(revision )
+@@ -0,0 +1,160 @@
++#!/usr/bin/env bash
++
++##############################################################################
++##
++##  Gradle start up script for UN*X
++##
++##############################################################################
++
++# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
++DEFAULT_JVM_OPTS=""
++
++APP_NAME="Gradle"
++APP_BASE_NAME=`basename "$0"`
++
++# Use the maximum available, or set MAX_FD != -1 to use that value.
++MAX_FD="maximum"
++
++warn ( ) {
++    echo "$*"
++}
++
++die ( ) {
++    echo
++    echo "$*"
++    echo
++    exit 1
++}
++
++# OS specific support (must be 'true' or 'false').
++cygwin=false
++msys=false
++darwin=false
++case "`uname`" in
++  CYGWIN* )
++    cygwin=true
++    ;;
++  Darwin* )
++    darwin=true
++    ;;
++  MINGW* )
++    msys=true
++    ;;
++esac
++
++# Attempt to set APP_HOME
++# Resolve links: $0 may be a link
++PRG="$0"
++# Need this for relative symlinks.
++while [ -h "$PRG" ] ; do
++    ls=`ls -ld "$PRG"`
++    link=`expr "$ls" : '.*-> \(.*\)$'`
++    if expr "$link" : '/.*' > /dev/null; then
++        PRG="$link"
++    else
++        PRG=`dirname "$PRG"`"/$link"
++    fi
++done
++SAVED="`pwd`"
++cd "`dirname \"$PRG\"`/" >/dev/null
++APP_HOME="`pwd -P`"
++cd "$SAVED" >/dev/null
++
++CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
++
++# Determine the Java command to use to start the JVM.
++if [ -n "$JAVA_HOME" ] ; then
++    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
++        # IBM's JDK on AIX uses strange locations for the executables
++        JAVACMD="$JAVA_HOME/jre/sh/java"
++    else
++        JAVACMD="$JAVA_HOME/bin/java"
++    fi
++    if [ ! -x "$JAVACMD" ] ; then
++        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
++
++Please set the JAVA_HOME variable in your environment to match the
++location of your Java installation."
++    fi
++else
++    JAVACMD="java"
++    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
++
++Please set the JAVA_HOME variable in your environment to match the
++location of your Java installation."
++fi
++
++# Increase the maximum file descriptors if we can.
++if [ "$cygwin" = "false" -a "$darwin" = "false" ] ; then
++    MAX_FD_LIMIT=`ulimit -H -n`
++    if [ $? -eq 0 ] ; then
++        if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
++            MAX_FD="$MAX_FD_LIMIT"
++        fi
++        ulimit -n $MAX_FD
++        if [ $? -ne 0 ] ; then
++            warn "Could not set maximum file descriptor limit: $MAX_FD"
++        fi
++    else
++        warn "Could not query maximum file descriptor limit: $MAX_FD_LIMIT"
++    fi
++fi
++
++# For Darwin, add options to specify how the application appears in the dock
++if $darwin; then
++    GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
++fi
++
++# For Cygwin, switch paths to Windows format before running java
++if $cygwin ; then
++    APP_HOME=`cygpath --path --mixed "$APP_HOME"`
++    CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
++    JAVACMD=`cygpath --unix "$JAVACMD"`
++
++    # We build the pattern for arguments to be converted via cygpath
++    ROOTDIRSRAW=`find -L / -maxdepth 1 -mindepth 1 -type d 2>/dev/null`
++    SEP=""
++    for dir in $ROOTDIRSRAW ; do
++        ROOTDIRS="$ROOTDIRS$SEP$dir"
++        SEP="|"
++    done
++    OURCYGPATTERN="(^($ROOTDIRS))"
++    # Add a user-defined pattern to the cygpath arguments
++    if [ "$GRADLE_CYGPATTERN" != "" ] ; then
++        OURCYGPATTERN="$OURCYGPATTERN|($GRADLE_CYGPATTERN)"
++    fi
++    # Now convert the arguments - kludge to limit ourselves to /bin/sh
++    i=0
++    for arg in "$@" ; do
++        CHECK=`echo "$arg"|egrep -c "$OURCYGPATTERN" -`
++        CHECK2=`echo "$arg"|egrep -c "^-"`                                 ### Determine if an option
++
++        if [ $CHECK -ne 0 ] && [ $CHECK2 -eq 0 ] ; then                    ### Added a condition
++            eval `echo args$i`=`cygpath --path --ignore --mixed "$arg"`
++        else
++            eval `echo args$i`="\"$arg\""
++        fi
++        i=$((i+1))
++    done
++    case $i in
++        (0) set -- ;;
++        (1) set -- "$args0" ;;
++        (2) set -- "$args0" "$args1" ;;
++        (3) set -- "$args0" "$args1" "$args2" ;;
++        (4) set -- "$args0" "$args1" "$args2" "$args3" ;;
++        (5) set -- "$args0" "$args1" "$args2" "$args3" "$args4" ;;
++        (6) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" ;;
++        (7) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" ;;
++        (8) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" "$args7" ;;
++        (9) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" "$args7" "$args8" ;;
++    esac
++fi
++
++# Split up the JVM_OPTS And GRADLE_OPTS values into an array, following the shell quoting and substitution rules
++function splitJvmOpts() {
++    JVM_OPTS=("$@")
++}
++eval splitJvmOpts $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS
++JVM_OPTS[${#JVM_OPTS[*]}]="-Dorg.gradle.appname=$APP_BASE_NAME"
++
++exec "$JAVACMD" "${JVM_OPTS[@]}" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+Index: app/src/main/java/com/mao/view/photoview/OnOutsidePhotoTapListener.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/photoview/OnOutsidePhotoTapListener.java	(revision )
++++ app/src/main/java/com/mao/view/photoview/OnOutsidePhotoTapListener.java	(revision )
+@@ -0,0 +1,14 @@
++package com.mao.view.photoview;
++
++import android.widget.ImageView;
++
++/**
++ * Callback when the user tapped outside of the photo
++ */
++public interface OnOutsidePhotoTapListener {
++
++    /**
++     * The outside of the photo has been tapped
++     */
++    void onOutsidePhotoTap(ImageView imageView);
++}
+Index: sticker/src/main/java/com/xiaopo/flying/sticker/BitmapStickerIcon.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- sticker/src/main/java/com/xiaopo/flying/sticker/BitmapStickerIcon.java	(revision )
++++ sticker/src/main/java/com/xiaopo/flying/sticker/BitmapStickerIcon.java	(revision )
+@@ -0,0 +1,98 @@
++package com.xiaopo.flying.sticker;
++
++import android.graphics.Canvas;
++import android.graphics.Paint;
++import android.graphics.drawable.Drawable;
++import android.support.annotation.IntRange;
++import android.view.MotionEvent;
++
++/**
++ * @author wupanjie
++ */
++public class BitmapStickerIcon extends DrawableSticker implements StickerIconEvent {
++  public static final float DEFAULT_ICON_RADIUS = 30f;
++  public static final float DEFAULT_ICON_EXTRA_RADIUS = 10f;
++
++  public static final int LEFT_TOP = 0;
++  public static final int RIGHT_TOP = 1;
++  public static final int LEFT_BOTTOM = 2;
++  public static final int RIGHT_BOTOM = 3;
++
++  private float iconRadius = DEFAULT_ICON_RADIUS;
++  private float iconExtraRadius = DEFAULT_ICON_EXTRA_RADIUS;
++  private float x;
++  private float y;
++  private int position = LEFT_TOP;
++
++  private StickerIconEvent iconEvent;
++
++  public BitmapStickerIcon(Drawable drawable, int position) {
++    super(drawable);
++    this.position = position;
++  }
++
++  public void draw(Canvas canvas, Paint paint) {
++    canvas.drawCircle(x, y, iconRadius, paint);
++    super.draw(canvas);
++  }
++
++  public float getX() {
++    return x;
++  }
++
++  public void setX(float x) {
++    this.x = x;
++  }
++
++  public float getY() {
++    return y;
++  }
++
++  public void setY(float y) {
++    this.y = y;
++  }
++
++  public float getIconRadius() {
++    return iconRadius;
++  }
++
++  public void setIconRadius(float iconRadius) {
++    this.iconRadius = iconRadius;
++  }
++
++  public float getIconExtraRadius() {
++    return iconExtraRadius;
++  }
++
++  public void setIconExtraRadius(float iconExtraRadius) {
++    this.iconExtraRadius = iconExtraRadius;
++  }
++
++  @Override public void onActionDown(StickerView stickerView, MotionEvent event) {
++    if (iconEvent != null) iconEvent.onActionDown(stickerView, event);
++  }
++
++  @Override public void onActionMove(StickerView stickerView, MotionEvent event) {
++    if (iconEvent != null) iconEvent.onActionMove(stickerView, event);
++  }
++
++  @Override public void onActionUp(StickerView stickerView, MotionEvent event) {
++    if (iconEvent != null) iconEvent.onActionUp(stickerView, event);
++  }
++
++  public StickerIconEvent getIconEvent() {
++    return iconEvent;
++  }
++
++  public void setIconEvent(StickerIconEvent iconEvent) {
++    this.iconEvent = iconEvent;
++  }
++
++  public int getPosition() {
++    return position;
++  }
++
++  public void setPosition(int position) {
++    this.position = position;
++  }
++}
+Index: .idea/gradle.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/gradle.xml	(revision )
++++ .idea/gradle.xml	(revision )
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="GradleSettings">
++    <option name="linkedExternalProjectsSettings">
++      <GradleProjectSettings>
++        <option name="distributionType" value="DEFAULT_WRAPPED" />
++        <option name="externalProjectPath" value="$PROJECT_DIR$" />
++        <option name="modules">
++          <set>
++            <option value="$PROJECT_DIR$" />
++            <option value="$PROJECT_DIR$/app" />
++            <option value="$PROJECT_DIR$/sticker" />
++          </set>
++        </option>
++        <option name="resolveModulePerSourceSet" value="false" />
++      </GradleProjectSettings>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/mao/view/util/FileUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/com/mao/view/util/FileUtil.java	(revision )
++++ app/src/main/java/com/mao/view/util/FileUtil.java	(revision )
+@@ -0,0 +1,66 @@
++package com.mao.view.util;
++
++import android.content.Context;
++import android.content.Intent;
++import android.net.Uri;
++import android.os.Environment;
++import android.provider.MediaStore;
++import android.text.TextUtils;
++import android.util.Log;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileNotFoundException;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.nio.channels.FileChannel;
++import java.text.SimpleDateFormat;
++import java.util.Date;
++import java.util.Locale;
++
++/**
++ * Created by snowbean on 16-8-5.
++ */
++public class FileUtil {
++  private static final String TAG = "FileUtil";
++
++  public static String getFolderName(String name) {
++    File mediaStorageDir =
++        new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
++            name);
++
++    if (!mediaStorageDir.exists()) {
++      if (!mediaStorageDir.mkdirs()) {
++        return "";
++      }
++    }
++    return mediaStorageDir.getAbsolutePath();
++  }
++
++  /**
++   * 判断sd卡是否可以用
++   */
++  private static boolean isSDAvailable() {
++    return Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
++  }
++
++  public static File getNewFile(Context context, String folderName) {
++
++    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA);
++
++    String timeStamp = simpleDateFormat.format(new Date());
++
++    String path;
++    if (isSDAvailable()) {
++      path = getFolderName(folderName) + File.separator + timeStamp + ".jpg";
++    } else {
++      path = context.getFilesDir().getPath() + File.separator + timeStamp + ".jpg";
++    }
++
++    if (TextUtils.isEmpty(path)) {
++      return null;
++    }
++
++    return new File(path);
++  }
++}

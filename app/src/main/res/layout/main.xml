@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.mao.activity.Main"
+    >
+
+    <!--<com.mao.view.MyView-->
+        <!--android:id="@+id/myview"-->
+        <!--myview:img="@mipmap/ic_launcher_round"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--&gt;-->
+    <!--</com.mao.view.MyView>-->
+
+
+    
+
+    <com.xiaopo.flying.sticker.StickerView
+        android:id="@+id/stickerview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:showIcons="true"
+        app:showBorder="true">
+
+        <com.github.chrisbanes.photoview.PhotoView
+            android:id="@+id/photo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+    </com.xiaopo.flying.sticker.StickerView>
+
+
+    <Button
+        android:text="添加一个"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="add_sticker"
+        />
+
+</FrameLayout>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:img="@mipmap/ic_launcher_round"
+>
+
+    <com.mao.view.photoview.MPhotoView
+        android:id="@+id/myview_photoview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <com.xiaopo.flying.sticker.StickerView
+        android:id="@+id/myview_stickerview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:showIcons="true"
+        app:showBorder="true">
+
+    </com.xiaopo.flying.sticker.StickerView>
+
+</FrameLayout>
