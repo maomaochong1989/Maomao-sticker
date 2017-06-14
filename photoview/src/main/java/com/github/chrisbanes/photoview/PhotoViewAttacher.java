@@ -590,7 +590,13 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         matrix.set(mSuppMatrix);
     }
 
-    private Matrix getDrawMatrix() {
+    public void setSupperMatrix(Matrix matrix){
+        mSuppMatrix.set(matrix);
+        setImageViewMatrix(getDrawMatrix());
+        checkMatrixBounds();
+    }
+
+    public Matrix getDrawMatrix() {
         mDrawMatrix.set(mBaseMatrix);
         mDrawMatrix.postConcat(mSuppMatrix);
         return mDrawMatrix;
@@ -626,48 +632,9 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         checkMatrixBounds();
     }
 
-
-    private Matrix firstMatrix;
-    private Matrix secondMatrix;
-    private Matrix processMatrix;
-    private float[] firstValues=new float[9];
-    private float[] secondValues=new float[9];
-    private float[] processValues=new float[9];
-    private boolean isFirst=true;
-
-    private void setImageViewMatrix(Matrix matrix) {
+    public void setImageViewMatrix(Matrix matrix) {
         mImageView.setImageMatrix(matrix);
-        // Call MatrixChangedListener if needed
         RectF displayRect = getDisplayRect(matrix);
-        if(isFirst){
-            firstMatrix=matrix;
-            matrix.getValues(firstValues);
-//            if(firstValues[0]!=0){
-                isFirst=false;
-//            }
-        }else{
-            secondMatrix=matrix;
-            matrix.getValues(secondValues);
-        }
-        Log.d(TAG, "onMatrixChanged: fisrt="+firstValues[0]+"  "+firstValues[1]+"  "+firstValues[2]+"  "+firstValues[3]+"  "+firstValues[4]+"  "+firstValues[5]+"  "+firstValues[6]+"  "+firstValues[7]+"  "+firstValues[8]);
-        Log.d(TAG, "onMatrixChanged: second="+secondValues[0]+"  "+secondValues[1]+"  "+secondValues[2]+"  "+secondValues[3]+"  "+secondValues[4]+"  "+secondValues[5]+"  "+secondValues[6]+"  "+secondValues[7]+"  "+secondValues[8]);
-        processValues[0]=processValues[4]=secondValues[0]/firstValues[0];
-        processValues[2]=secondValues[2]-firstValues[2];
-        processValues[5]=secondValues[5]-firstValues[5];
-////                stickerView.test();
-        Log.d(TAG, "onMatrixChanged: processValues0="+processValues[0]);
-        Log.d(TAG, "onMatrixChanged: processValues2="+processValues[2]);
-        Log.d(TAG, "onMatrixChanged: processValues5="+processValues[5]);
-        if(null!=firstMatrix && null!=secondMatrix){
-            processMatrix=new Matrix();
-            firstMatrix.invert(firstMatrix);
-            processMatrix.setConcat(secondMatrix,firstMatrix);
-            if (mOnDisplayRectChangeListener != null) {
-                mOnDisplayRectChangeListener.transfer(matrix);
-            }
-        }
-
-
         if (mMatrixChangeListener != null) {
             if (displayRect != null) {
                 mMatrixChangeListener.onMatrixChanged(displayRect);
