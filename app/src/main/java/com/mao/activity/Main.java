@@ -2,7 +2,6 @@ package com.mao.activity;
 
 import android.app.Activity;
 import android.graphics.Matrix;
-import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -12,13 +11,11 @@ import android.view.View;
 
 import com.example.administrator.maomao_sticker.R;
 import com.github.chrisbanes.photoview.CalculateUtil;
-import com.github.chrisbanes.photoview.OnDisplayRectChangeListener;
-import com.github.chrisbanes.photoview.OnMatrixChangedListener;
-import com.github.chrisbanes.photoview.OnScaleChangedListener;
 import com.github.chrisbanes.photoview.OnSuperMatrixListener;
 import com.github.chrisbanes.photoview.PhotoView;
-import com.mao.view.MyView;
-import com.mao.view.PhotoCropView;
+import com.mao.model.Product;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.xiaopo.flying.sticker.BitmapStickerIcon;
 import com.xiaopo.flying.sticker.DeleteIconEvent;
 import com.xiaopo.flying.sticker.FixedEvent;
@@ -26,6 +23,10 @@ import com.xiaopo.flying.sticker.NonIconEvent;
 import com.xiaopo.flying.sticker.StickerView;
 import com.xiaopo.flying.sticker.TextSticker;
 import com.xiaopo.flying.sticker.ZoomIconEvent;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.Arrays;
 
@@ -37,18 +38,12 @@ public class Main extends Activity {
 
     private static final String TAG = "maomao";
 
-    private MyView myView;
 
     private PhotoView photoView;
 
     private StickerView stickerView;
 
-    private Matrix matrix;
-
-
-    private float oldTop = 0;
-    private float oldLeft = 0;
-    private float oldScale = 1.0f;
+    private Matrix matrix = null;
 
 
     @Override
@@ -58,7 +53,14 @@ public class Main extends Activity {
         CalculateUtil.getScreenRect(this, true, false);
 
         photoView = (PhotoView) findViewById(R.id.photo);
-        photoView.setImageResource(R.drawable.abc);
+//        photoView.setImageResource(R.drawable.abc);
+
+        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this).build();
+        ImageLoader loader=ImageLoader.getInstance();
+        loader.init(config);
+        loader.displayImage("http://img0.imgtn.bdimg.com/it/u=1431766069,3244964907&fm=26&gp=0.jpg",photoView);
+
+
         matrix = photoView.getImageMatrix();
 
         photoView.setOnSuperMatrixListener(new OnSuperMatrixListener() {
@@ -69,12 +71,14 @@ public class Main extends Activity {
 
             @Override
             public void postScale(float scaleFactor, float focusX, float focusY) {
-                stickerView.postScale(scaleFactor,focusX,focusY);
+                stickerView.postScale(scaleFactor, focusX, focusY);
+                Log.d(TAG, "postScale---: " + scaleFactor);
             }
 
             @Override
             public void postScale(float scaleFactor) {
                 stickerView.postScale(scaleFactor);
+                Log.d(TAG, "postScale: " + scaleFactor);
             }
 
             @Override
@@ -86,8 +90,10 @@ public class Main extends Activity {
 
 
 
+
+
 //        Drawable drawable = this.getResources().getDrawable(R.mipmap.ic_launcher);
-////        BitmapDrawable bitmapDrawable = new BitmapDrawable(drawable);
+//        BitmapDrawable bitmapDrawable = new BitmapDrawable(drawable);
 //        Bitmap bitmap=new BitmapDrawable(drawable);
 //        Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.sticker_transparent_background);
 //        myView = new MyView(this,bitmap);
@@ -115,16 +121,85 @@ public class Main extends Activity {
                         BitmapStickerIcon.LEFT_BOTTOM);
         heartIcon.setIconEvent(new FixedEvent());
         stickerView.setIcons(Arrays.asList(deleteIcon, zoomIcon, flipIcon, heartIcon));
-        addSticker("文字最好不要太多，如果太多看看会发生什么");
+
+
+        findViewById(R.id.saveinfo).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Product product = new Product();
+                product.setId(1);
+                product.setKey("test");
+                product.setPhoto("http://img0.imgtn.bdimg.com/it/u=1431766069,3244964907&fm=26&gp=0.jpg");
+                Matrix matrix = new Matrix();
+                photoView.getAttacher().getSuppMatrix(matrix);
+                product.setPhotoMatrix(matrix);
+                //保存图片的放大比例
+                save(product,photoView,stickerView);
+            }
+        });
+
+
+        findViewById(R.id.displayinfo).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String pString = SpUtil.getProduct(Main.this,"test");
+                if (pString == null){
+                    addSticker("文字最好不要太多，如果太多看看会发生什么");
+                }else {
+                    Log.d(TAG, "onCreate: pString"+pString);
+                    try {
+                        JSONObject obj = new JSONObject(pString);
+                        JSONArray array = obj.optJSONArray("photomatrix");
+                        float[] values = new float[9];
+                        for (int i =0;i<array.length();i++){
+                            values[i]=(float) array.getDouble(i);
+                        }
+                        Matrix matrix = new Matrix();
+                        matrix.setValues(values);
+                        photoView.getAttacher().setSupperMatrix(matrix);
+
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        String pString = SpUtil.getProduct(this,"test");
+        if (pString == null){
+            addSticker("文字最好不要太多，如果太多看看会发生什么");
+        }else {
+            Log.d(TAG, "onCreate拿到的值: "+pString);
+        }
+
 
 
     }
 
+    public void save(Product product, PhotoView photoView, StickerView stickerView) {
+        String key = product.getKey();
+        Matrix photoMatrix = product.getPhotoMatrix();
+        float[] values = new float[9];
+        photoMatrix.getValues(values);
+        JSONObject object = new JSONObject();
+        try {
+            object.put("key",key);
+            JSONArray array = new JSONArray();
+            for (int i=0;i<9;i++){
+                array.put(values[i]);
+            }
+            object.put("photomatrix",array);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        SpUtil.saveProduct(this,key,object.toString());
+    }
 
     /**
      * 添加stickerview
      *
-     * @param text
+     * @param text 添加的sticker的文字
      */
     public void addSticker(String text) {
         Drawable drawable =

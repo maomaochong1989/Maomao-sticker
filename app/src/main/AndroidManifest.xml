@@ -3,6 +3,8 @@
     package="com.example.administrator.maomao_sticker"
     >
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
