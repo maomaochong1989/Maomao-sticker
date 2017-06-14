@@ -55,5 +55,13 @@
         android:layout_height="wrap_content"
         android:id="@+id/displayinfo"
         />
+    <Button
+        android:layout_marginTop="100dp"
+        android:layout_marginLeft="200dp"
+        android:text="移除所有的sticker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/removestickers"
+        />
 
 </FrameLayout>

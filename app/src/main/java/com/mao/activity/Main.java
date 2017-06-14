@@ -14,12 +14,14 @@ import com.github.chrisbanes.photoview.CalculateUtil;
 import com.github.chrisbanes.photoview.OnSuperMatrixListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.mao.model.Product;
+import com.mao.view.Stick;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.xiaopo.flying.sticker.BitmapStickerIcon;
 import com.xiaopo.flying.sticker.DeleteIconEvent;
 import com.xiaopo.flying.sticker.FixedEvent;
 import com.xiaopo.flying.sticker.NonIconEvent;
+import com.xiaopo.flying.sticker.Sticker;
 import com.xiaopo.flying.sticker.StickerView;
 import com.xiaopo.flying.sticker.TextSticker;
 import com.xiaopo.flying.sticker.ZoomIconEvent;
@@ -27,8 +29,10 @@ import com.xiaopo.flying.sticker.ZoomIconEvent;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by Administrator on 2017/4/18.
@@ -157,7 +161,20 @@ public class Main extends Activity {
                         Matrix matrix = new Matrix();
                         matrix.setValues(values);
                         photoView.getAttacher().setSupperMatrix(matrix);
-
+                        obj.optJSONObject("stickers");
+                        JSONArray stickerArray = obj.optJSONArray("stickers");
+                        for (int i = 0;i<stickerArray.length();i++){
+                            JSONObject object = stickerArray.optJSONObject(i);
+                            String text = object.optString("text");
+                            JSONArray arr = object.optJSONArray("val");
+                            Matrix stickerMatrix=new Matrix();
+                            float[] val = new float[9];
+                            for (int j=0;j<arr.length();j++){
+                                val[j]=(float)arr.getDouble(j);
+                            }
+                            stickerMatrix.setValues(val);
+                            addSticker(text,stickerMatrix);
+                        }
 
                     } catch (JSONException e) {
                         e.printStackTrace();
@@ -165,6 +182,15 @@ public class Main extends Activity {
                 }
             }
         });
+
+        findViewById(R.id.removestickers).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+               stickerView.removeAllStickers();
+            }
+        });
+
+
 
         String pString = SpUtil.getProduct(this,"test");
         if (pString == null){
@@ -190,9 +216,29 @@ public class Main extends Activity {
                 array.put(values[i]);
             }
             object.put("photomatrix",array);
+            JSONArray stickerArray = new JSONArray();
+            List<Sticker> stickers = stickerView.getStickers();
+            for (int i = 0 ; i < stickers.size() ; i++){
+                Sticker sticker = stickers.get(i);
+                Matrix matrix = sticker.getMatrix();
+                JSONObject stickerobj = new JSONObject();
+                stickerobj.put("text",((TextSticker)sticker).getText());
+                JSONArray stick = new JSONArray();
+                float[] val = new float[9];
+                matrix.getValues(val);
+                for (int j=0;j<9;j++){
+                    stick.put(val[j]);
+                }
+                stickerobj.put("val",stick);
+                stickerArray.put(stickerobj);
+            }
+            object.put("stickers",stickerArray);
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+
+
         SpUtil.saveProduct(this,key,object.toString());
     }
 
@@ -213,6 +259,22 @@ public class Main extends Activity {
 
         stickerView.addSticker(textSticker);
     }
+
+    public void addSticker(String text,Matrix matrix) {
+        Drawable drawable =
+                ContextCompat.getDrawable(this, R.drawable.sticker_transparent_background);
+        final TextSticker textSticker = new TextSticker(this);
+        textSticker.setDrawable(drawable);
+        textSticker.setText(text);
+        textSticker.setMaxTextSize(14);
+        textSticker.resizeText();
+//        DrawableSticker sticker = new DrawableSticker(drawable);
+
+        stickerView.addSticker(textSticker,matrix);
+    }
+
+
+
 
     public void add_sticker(View view) {
         addSticker(" ");
