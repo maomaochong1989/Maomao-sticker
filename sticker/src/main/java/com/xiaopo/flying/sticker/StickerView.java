@@ -719,6 +719,19 @@ public class StickerView extends FrameLayout {
         invalidate();
     }
 
+    public void addSticker(Sticker sticker,Matrix matrix) {
+        if (sticker == null) {
+            Log.e(TAG, "Sticker to be added is null!");
+            return;
+        }
+
+        sticker.setMatrix(matrix);
+        handlingSticker = sticker;
+        stickers.add(sticker);
+        invalidate();
+    }
+
+
     public float[] getStickerPoints(Sticker sticker) {
         if (sticker == null) return new float[8];
         return sticker.getMappedBoundPoints();
@@ -862,121 +875,13 @@ public class StickerView extends FrameLayout {
         invalidate();
     }
 
-
-//    public void test(float[] processValues){
-//        if (stickers.size() > 0) {
-//            for (int i = 0 ; i<stickers.size();i++){
-//                float values[] = new float[9];
-//                Sticker sticker = stickers.get(i);
-//                Matrix matrix = sticker.getMatrix();
-//                matrix.getValues(values);
-//
-//                Log.d(TAG, "test: fisrt="+values[0]+"  "+values[1]+"  "+values[2]+"  "+values[3]+"  "+values[4]+"  "+values[5]+"  "+values[6]+"  "+values[7]+"  "+values[8]);
-//
-//
-//                values[0]=values[4]=processValues[0];
-//                values[2]=values[2]-processValues[2];
-//                values[5]=values[5]-processValues[5];
-//                matrix.setValues(values);
-//            }
-//        }
-//        invalidate();
-//
-//    }
-
-//    public void test1(RectF rectF){
-//        if (stickers.size() > 0) {
-//            for (int i = 0 ; i<stickers.size();i++){
-//                Sticker sticker = stickers.get(i);
-//                Matrix matrix = sticker.getMatrix();
-//                float[] points = sticker.getMappedBoundPoints();
-//                float[] points1 = points;
-//                points1[0]=300;
-//                points1[1]=300;
-////                RectF rect=new RectF();
-////                matrix.mapRect(rect);
-////                Log.d(TAG, "test1: lefttop"+points[0]+"=="+points[1]);
-////                Log.d(TAG, "test1: rightbottom"+points[6]+"=="+points[7]);
-//////                Log.d(TAG, "test1: widthandheight"+rect.width()+"=="+rect.height());
-////                RectF rect=new RectF(points[0],points[1],points[6],points[7]);
-////                RectF rect1=new RectF(points[0]+100,points[1]+100,points[6],points[7]);
-////                matrix.setRectToRect(rect,rect1, Matrix.ScaleToFit.FILL);
-////                matrix.mapPoints(points1,points);
-//            }
-//        }
-//        invalidate();
-//    }
-
-//    public void test2(Matrix processMatrix){
-//        if (stickers.size() > 0) {
-//            for (int i = 0 ; i<stickers.size();i++){
-//                Sticker sticker = stickers.get(i);
-//                Matrix matrix = sticker.getMatrix();
-//                float[] values1=new float[9];
-//                matrix.getValues(values1);
-//                Log.d(TAG, "test: values1="+values1[0]+"  "+values1[1]+"  "+values1[2]+"  "+values1[3]+"  "+values1[4]+"  "+values1[5]+"  "+values1[6]+"  "+values1[7]+"  "+values1[8]);
-//                matrix.setConcat(matrix,processMatrix);
-//                float[] values2=new float[9];
-//                matrix.getValues(values2);
-//                Log.d(TAG, "test: values2="+values2[0]+"  "+values2[1]+"  "+values2[2]+"  "+values2[3]+"  "+values2[4]+"  "+values2[5]+"  "+values2[6]+"  "+values2[7]+"  "+values2[8]);
-//            }
-//        }
-//        invalidate();
-//    }
-
-//    public void test3(RectF rectF, float scale,float dx,float dy){
-//            if (stickers.size() > 0) {
-//                for (int i = 0 ; i<stickers.size();i++){
-//                    Sticker sticker = stickers.get(i);
-//
-//                    //刚开始没有设置比例的时候给设置比例
-//                    if(sticker.getProportionX()==0 || sticker.getProportionY() == 0){
-//                        float []points=getStickerPoints(sticker);
-//                        float proportionX=getProportion(rectF.width(),points[0]);
-//                        float proportionY=getProportion(rectF.height(),points[1]);
-//                        sticker.setProportionXY(proportionX,proportionY);
-//                    }
-//                    Matrix matrix = sticker.getMatrix();
-//                    if (scale == 1.0 ){
-//                        float values[]=new float[9];
-//                        matrix.getValues(values);
-//                        values[2]=values[2]+dx;
-//                        values[5]=values[5]+dy;
-//                        matrix.setValues(values);
-//                    }else{
-////                        matrix.postScale(scale,scale);
-////                        float []points1=getStickerPoints(sticker);
-////                        //位置矫正
-////                        float shouldx=rectF.width()*sticker.getProportionX()-rectF.left;
-////                        float shouldy=rectF.height()*sticker.getProportionY()-rectF.top;
-////                        float disx = getDistance(points1[0],shouldx);
-////                        float disy = getDistance(points1[1],shouldy);
-////                        matrix.postTranslate(disx,disy);
-//                    }
-//
-//
-//                }
-//            }
-//            invalidate();
-//        }
-
-//    public void test4(RectF rectF){
-//        if (stickers.size() > 0) {
-//            for (int i = 0 ; i<stickers.size();i++){
-//                Sticker sticker = stickers.get(i);
-//                RectF mappedBound = sticker.getMappedBound();
-//
-//                Matrix matrix = sticker.getMatrix();
-////                matrix.setRectToRect(mappedBound,rectF, Matrix.ScaleToFit.FILL);
-////                RectF rect=new RectF();
-////                matrix.mapRect(rectF);
-//                Log.d(TAG, "test4: ");
-//
-//            }
-//        }
-//        invalidate();
-//
-//    }
+    /***
+     * 获取sticker列表
+     * @return
+     */
+    public List<Sticker> getStickers(){
+        return stickers;
+    }
 
 
 
